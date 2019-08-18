@@ -9,4 +9,4 @@ While mainly designed for the Oz progrmaming language, OzDoc is a highly flexibl
 
 Feel free to use it and improve it with us, as it provides a robust framework containing a powerful and malleable parser along with a template-based documentation generator.
 
-A user and developer manual are available in the Appendix of the paper (available as "OzDoc-Paper-AlexeFrenyo-2019").
+A user and developer manual are available in the Appendix of the paper (available as "OzDoc-Thesis-AlexeFrenyo-2019").
