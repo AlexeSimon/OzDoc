@@ -1,0 +1,76 @@
+.container {
+    max-width: 1400px;
+}
+
+.oz-code .gr {
+    color: #008000;
+    font-weight: bold;
+}
+
+.oz-code .pr {
+    color: #AA22FF;
+    font-weight: bold;
+}
+
+.oz-code .bl {
+    color: #156b9b;
+}
+.oz-code .com {
+    color: #408080;
+    font-style: italic;
+}
+
+.clearer {
+    height:1px;
+    overflow:hidden;
+    clear:both;
+    margin-top:-1px;
+}
+.collapsible {
+    cursor: pointer;
+    padding: 1px;
+    border: none;
+    font-family: monospace
+
+}
+
+.active, .collapsible:hover {
+    background-color: #AAAAAA;
+}
+
+.content {
+    display: none;
+    overflow: hidden;
+}
+
+.scrollable {
+    overflow-y: auto;
+}
+
+h3 {
+    font-size: 16px; font-style: italic; font-weight: bold;
+}
+
+ul.blockList {
+    list-style: none; background-color: #f8f8f8; /*padding: 0;*/
+    margin: 10px 0 10px 0;
+}
+
+ul.blockList h3 {
+    padding: 0; margin: 15px 0;
+}
+
+ul.blockList ul.blockList {
+    list-style: none; padding: 0; background-color: #ffffff;
+}
+
+ul.blockList ul.blockList h4 {
+    background-color: #dee3e9; border: 1px solid #d0d9e0;
+}
+
+/*
+h4 {
+    background-color: #dee3e9;
+    border: #d0d9e0
+}
+*/
