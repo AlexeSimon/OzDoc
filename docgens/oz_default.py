@@ -68,7 +68,8 @@ def run(parser, settings, out):
             if funcname != '$':
                 with tag('tr'):
                     with tag('td'):
-                        text(funcname)
+                        with tag('a', href="#"+function[2]+str(function[0].node_id)):
+                            text(funcname)
                     with tag('td'):
                         description = ""
                         prev_sister = function[0].find_previous_sister()
@@ -77,6 +78,29 @@ def run(parser, settings, out):
                                 description = code[prev_sister.start:prev_sister.end].split('\n')[0][:80]
                                 description = description.lstrip('/*% ').rstrip('/*% ')
                         text(description)
+                        node = function[0]
+                        context_hierarchy = ""
+                        link = ""
+                        if node.parent:
+                            node = node.parent
+                        while node.parent:
+                            if node.context_type in settings.fun_keyword:
+                                name = ""
+                                for repo_node in fun_repo:
+                                    if repo_node[0].start == node.start:
+                                        name = repo_node[2]
+                                        break
+                                context_hierarchy = node.context_type + '(' + name + ')' + link + context_hierarchy
+                            else:
+                                context_hierarchy = node.context_type + link + context_hierarchy
+                            node = node.parent
+                            link = " > "
+                        if node.description:
+                            filename = node.description.split('/')
+                            context_hierarchy = filename[len(filename) - 1] + link + context_hierarchy
+                        if context_hierarchy:
+                            doc.stag('br')
+                            text('(from: '+context_hierarchy+')')
     new_tablebody = doc.getvalue()
     fh.replace_in_file('@tablebody', new_tablebody, destination)
 
@@ -100,7 +124,7 @@ def run(parser, settings, out):
                     for function in fun_repo:
                         funcname = function[2]
                         if funcname != '$':
-                            line('h4', funcname)
+                            line('h4', funcname, id=function[2]+str(function[0].node_id))
                             with tag('pre', style='font-style: italic;'):
                                 text(code[function[1].start:function[1].end])
 
@@ -155,7 +179,7 @@ def run(parser, settings, out):
                             with tag('dt'):
                                 line('span', 'Source Code:', klass='codeLabel')
                             with tag('dd'):
-                                id = str(function[0].node_id)
+                                id = function[2]+str(function[0].node_id)+'code'
                                 line('button', 'Show', onclick='show' + id + '()')
                                 with tag('pre', id=id, style='display: none;'):
                                     line('code', (code[function[0].start:function[0].end]))
