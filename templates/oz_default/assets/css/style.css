@@ -2,23 +2,46 @@
     max-width: 1400px;
 }
 
-.oz-code .gr {
-    color: #008000;
+.oz-code .oz_file {
+    color: #DDB639/*#FF4500*/;
     font-weight: bold;
 }
 
-.oz-code .pr {
+.oz-code .oz_keyword {
     color: #AA22FF;
     font-weight: bold;
 }
 
-.oz-code .bl {
-    color: #156b9b;
+.oz-code .oz_keyword_simple {
+    color: #AA22FF;
 }
-.oz-code .com {
-    color: #408080;
+
+.oz-code .oz_comment {
+    color: #008000;
     font-style: italic;
 }
+
+.oz-code .oz_comment .oz_keyword_simple{
+    color: #008000;
+    font-style: italic;
+}
+
+.oz-code .oz_comment_ast {
+    color: #008000;
+}
+
+.oz-code .oz_atom {
+    color: #156b9b;
+}
+
+/*.oz-code .oz_variable {
+    color: #ff0000;
+}
+
+.oz-code .oz_string {
+    color: #408080;
+    font-style: italic;
+}*/
 
 .clearer {
     height:1px;
@@ -35,7 +58,7 @@
 }
 
 .active, .collapsible:hover {
-    background-color: #AAAAAA;
+    background-color: #FFFFFF;
 }
 
 .content {

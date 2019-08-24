@@ -11,52 +11,48 @@ Version : 1.0
 License: GNU GPL
 
 """
+oz_block_keywords = ["case", "choice", "class", "for", "functor", "fun", "if", "local", "lock", "meth",
+                     "proc", "raise", "thread", "try"]
+oz_simple_keywords = ["andthen", "at", "attr", "break", "catch", "declare", "define", "else", "elseif",
+                      "finally", "from", "import", "in", "of", "then"]
+
+
+def oz_block_keyword(keyword):
+    return [keyword, "text", keyword, "text", "end"]
+
+
+def oz_simple_keyword(keyword):
+    return [keyword, "text", keyword, "empty", ""]
+
+
+def oz_generate_context_rules(keywords, f):
+    return [f(keyword) for keyword in keywords]
 
 # Parser context rules. Can use regex
 priority_context_rules = [
                 ["comment_line", "symbol", '%', "symbol", '\n'],
                 ["comment_block", "symbol", "/*", "symbol", "*/"],
                 ["string1", "symbol", "\'", "symbol", "\'"],
-                ["string2", "symbol", '\"', "symbol", '\"'],
-                ["var2", "symbol", "`", "symbol", "`"]]
+                ["string2", "symbol", '\"', "symbol", '\"']]#,
+                #["var2", "symbol", "`", "symbol", "`"]]
 
 context_rules = [
                 ["{", "symbol", "{", "symbol", "}"],
                 ["[]", "symbol", "[]", "empty", ""],
-                ["var", "regex", "[A-Z][A-Za-z0-9]*", "empty", ""],
-                ["atom", "text", "atom", "regex", "[a-z]*\(", "\)"],
+                ["var", "varregex", "[A-Z][A-Za-z0-9]*", "empty", ""]
+                ] \
+                + oz_generate_context_rules(oz_block_keywords, oz_block_keyword)\
+                + oz_generate_context_rules(oz_simple_keywords, oz_simple_keyword)\
+                + [["atom", "regex", "[a-z][A-Za-z0-9]*", "empty", ""]]
+                #["atom", "text", "atom", "regex", "[a-z]*\(", "\)"],
                 #[":", "regex", "[a-z0-9]*:[ ]*", "regex", "(?![a-zA-Z0-9 ])"],
-                ["functor", "text", "functor", "text", "end"],
-                ["fun", "text", "fun", "text", "end"],
-                ["local", "text", "local", "text", "end"],
-                ["case", "text", "case", "text",  "end"],
-                ["try", "text", "try", "text",  "end"],
-                ["if", "text", "if", "text",  "end"],
-                ["for", "text", "for", "text",  "end"],
-                ["raise", "text", "raise", "text",  "end"],
-                ["thread", "text", "thread", "text",  "end"],
-                ["lock", "text", "lock", "text",  "end"],
-                ["proc", "text", "proc", "text",  "end"],
-                ["meth", "text", "meth", "text",  "end"],
-                ["class", "text", "class", "text", "end"],
-                ["in", "text", "in", "empty", ""],
-                ["then", "text", "then", "empty", ""],
-                ["else", "text", "else", "empty", ""],
-                ["elseif", "text", "elseif", "empty", ""],
-                ["of", "text", "of", "empty", ""],
-                ["catch", "text", "catch", "empty", ""],
-                ["finally", "text", "finally", "empty", ""],
-                ["define", "text", "define", "empty", ""],
-                ["declare", "text", "declare", "empty", ""],
-                ["import", "text", "import", "empty", ""],
-                ["andthen", "text", "andthen", "empty", ""]]
 
 # Some context keywords
 
 comment_keyword = ["comment_line", 'comment_block']
 inline_comment_keyword = ["comment_line"]
 fun_keyword = ["fun", "proc", "meth"]
-def_keyword = ["{"]
+def_keyword = ["{"]#, "[a-z][A-Za-z0-9]*"]
 class_keyword = ["class"]
 
 # Regex

@@ -40,6 +40,18 @@ def eval_rule_regex(node, offset, regex):
         return None
 
 
+def eval_regex_text(node, offset, regex):
+    ans = regex.match(node.code[offset:])
+    if ans is not None:
+        found_string = ans.group(0)
+        if not (node.code[offset - 1].isalnum()) and not (node.code[offset + len(found_string)].isalnum()):
+            return found_string
+        else:
+            return None
+    else:
+        return None
+
+
 def eval_rule(node, offset, eval_name, rule_string) :
     if eval_name in evalfun:
         return evalfun[eval_name](node, offset, rule_string)
@@ -49,6 +61,7 @@ evalfun["empty"] = eval_rule_empty
 evalfun["symbol"] = eval_rule_symbol
 evalfun["text"] = eval_rule_text
 evalfun["regex"] = eval_rule_regex
+evalfun["varregex"] = eval_regex_text
 
 if __name__=="__main__":
     print("Error: This script is part of the OzDoc framework and should not be ran alone. Please locate and run OzDoc.py")

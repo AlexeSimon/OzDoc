@@ -163,9 +163,9 @@ class OzDocParser:
         self.context_rules = context_rules
 
         for rule in self.priority_context_rules + self.context_rules:
-            if rule[1] == "regex":
+            if rule[1] == "regex" or rule[1] == "varregex":
                 rule[2] = re.compile(rule[2])
-            if rule[3] == "regex":
+            if rule[3] == "regex" or rule[3] == "varregex":
                 rule[4] = re.compile(rule[4])
 
         self.build_abstract_syntax_tree(self.base_node)
@@ -233,7 +233,6 @@ class OzDocParser:
             for file_name in file_list:
                 child = last_dir.open_new_context(self.next_node_id(), "file", description=os.path.join(dirName, file_name))
                 self.build_abstract_syntax_tree(child)
-
 
     def build_abstract_syntax_tree(self, main_node):
 

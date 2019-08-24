@@ -15,52 +15,178 @@ License: GNU GPL
 import src.OzDocParser as OzDocParser
 import src.ListTools as ListTools
 import src.PrintTools as PrintTools
+import re
+import os
 from yattag import Doc, indent
+from pathlib import Path
 from src import FileHandler as fh
 
 supported_tags = ['@param', '@throws', '@return', '@see', '@since', '@version', '@pre', '@post']
 supported_names = ['Parameters', 'Throws', 'Returns', 'See Also', 'Since', 'Version', 'Pre-Conditions', 'Post-Conditions']
 supported_labels = ['paramLabel', 'throwLabel', 'returnLabel', 'seeLabel', 'sinceLabel', 'versionLabel', 'preLabel', 'postLabel']
 
-
-def tag_found_in_comment(tag_searched, taglist):
-    for tag_found in taglist:
-        if tag_found[0] == tag_searched:
-            return True
-    return False
-
-
-def make_tagged_section(section_tag, section_name, section_label, taglist, end_of_comment, tag, text, line, code):
-    with tag('dt'):
-        line('span', '{}:'.format(section_name), klass=section_label)
-    for i in range(len(taglist)):
-        tag_found = taglist[i]
-        if tag_found[0] == section_tag:
-            start = tag_found[1]
-            end = taglist[i + 1][1] - 1 if i < (len(taglist) - 1) else end_of_comment
-
-            with tag('dd'):
-                with tag('code'):
-                    text('-- ')
-                text(code[start:end][(len(section_tag)):].rstrip(' ').rstrip('/*%'))
+OZ_FILE_CLASS = 'oz_file'
+OZ_KEYWORD_CLASS = 'oz_keyword'
+OZ_KEYWORD_SIMPLE_CLASS = 'oz_keyword_simple'
+OZ_ATOM_CLASS = 'oz_atom'
+OZ_COMMENT_CLASS = 'oz_comment'
+OZ_COMMENT_CLASS_AST = 'oz_comment_ast'
+SPAN_END = "</span>"
+SPAN_END_LEN = len(SPAN_END)
+REGEX_PATH_SPLIT = re.compile("/|\\\\")
+gen_directory = ""
 
 
-def run(parser, settings, out):
+def run(parser, settings, template, out):
+    global gen_directory
+    gen_directory = out
+    if parser.base_node.context_type == 'dir':
+        generate_directory_doc(parser.base_node, settings, template, out)
+    elif parser.base_node.context_type == 'file':
+        generate_file_doc(parser.base_node, settings, template, out)
+    elif parser.base_node.context_type == 'text':
+        generate_file_doc(parser.base_node, settings, template, out)
+    else:
+        raise Exception("An error has occured. Expected 'file', 'dir' or 'text' as top node of the tree, got: {}.")\
+            .format(parser.base_node.context_type)
+
+    base_node_name = REGEX_PATH_SPLIT.split(parser.base_node.description)
+    if base_node_name[len(base_node_name) - 1] != 'index.oz':
+        os.remove(Path(out + '/index.html'))
+
+
+def generate_directory_doc(base_node, settings, template, out, prepend=""):
+    dirname = REGEX_PATH_SPLIT.split(base_node.description)
+    dirname = dirname[len(dirname) - 1]
+    new_out = out + '/' + dirname
+    if not os.path.exists(Path(new_out)):
+        os.mkdir(Path(new_out))
+
+    for child in base_node.children:
+        if child.context_type == 'dir':
+            generate_directory_doc(child, settings, template, new_out, "../"+prepend)
+        else:
+            generate_file_doc(child, settings, template, new_out, "../"+prepend)
+
+
+def generate_file_doc(base_node, settings, template, out, prepend=""):
+    filename = base_node.context_type
     destination = out + '/index.html'
-    code = parser.base_node.code
-    # Creation of the repository of all functions
-    fun_repo = OzDocParser.build_link_context_with_repo(parser.base_node, settings.fun_keyword, settings.def_keyword)
-    OzDocParser.link_following_regex_to_repo(parser.base_node, fun_repo, settings.fun_regex,
+
+    if base_node.description:
+        filename = REGEX_PATH_SPLIT.split(base_node.description)
+        filename = filename[len(filename) - 1]
+        destination = out + '/' + filename[:len(filename) - 3] + '.html'
+
+    destination = Path(destination)
+    fh.copy_file(Path(template+'/index.html'), destination)
+
+    fh.replace_in_file("assets/", prepend+"assets/", destination, replace_all=True)
+    fh.replace_in_file('@filename', filename, destination, replace_all=True)
+
+    generate_code_doc(base_node, settings, destination)
+
+
+def generate_code_doc(base_node, settings, destination):
+    code = base_node.code
+
+    regex_html_signs = re.compile(r'<|>')  # alternate: (r'&lt;|&gt;')
+
+    OzDocParser.fuse_similar_successive_contexts(base_node, settings.inline_comment_keyword)
+
+    ###################################################################################################################
+    #                      Creation of the repository of all functions, and function calls                            #
+    ###################################################################################################################
+    fun_repo = OzDocParser.build_link_context_with_repo(base_node, settings.fun_keyword, settings.def_keyword)
+    OzDocParser.link_following_regex_to_repo(base_node, fun_repo, settings.fun_regex,
                                              exception=settings.comment_keyword)
 
-    # Creation of the repository of all function calls
-    call_repo = OzDocParser.build_context_repo_not_in(parser.base_node, settings.def_keyword,
+    call_repo = OzDocParser.build_context_repo_not_in(base_node, settings.def_keyword,
                                                       ListTools.get_list_column(fun_repo, 1))
-    # Creation of the repository of all comments
-    comment_repo = OzDocParser.build_context_repo(parser.base_node, settings.comment_keyword)
-    OzDocParser.link_all_regex_to_repo(parser.base_node, comment_repo, settings.ozdoc_tag_regex)
 
-    # Generating the body of the table containing all of the functions.
+    ###################################################################################################################
+    #                               Creation of the repository of all comments                                        #
+    ###################################################################################################################
+    comment_repo = OzDocParser.build_context_repo(base_node, settings.comment_keyword)
+    OzDocParser.link_all_regex_to_repo(base_node, comment_repo, settings.ozdoc_tag_regex)
+    # PrintTools.print_repo(comment_repo)
+
+    ###################################################################################################################
+    #                                     Generating abstract syntax tree                                             #
+    ###################################################################################################################
+    doc, tag, text = Doc().tagtext()
+    with tag('pre', klass='oz-code'):
+        doc.asis(gen_html_ast(base_node, ["file"] + settings.oz_block_keywords, ["\'", "\"", "`"], settings))
+    ast = indent(doc.getvalue())
+    fh.replace_in_file('@abstract_syntax_tree', ast, destination)
+
+    doc, tag, text = Doc().tagtext()
+    with tag('script'):
+        text(open(Path(gen_directory+"/assets/ast/ast_script.js"), "r").read())
+    fh.replace_in_file('@abstract_syntax_tree_script', indent(doc.getvalue()), destination)
+
+    ###################################################################################################################
+    #                                          Generating source code                                                 #
+    ###################################################################################################################
+    doc, tag, text = Doc().tagtext()
+    with tag('pre'):
+        with tag('code'):
+            text(code)
+    source_code = doc.getvalue()
+
+    added = len('<pre><code>')
+    history_index = 0
+    ends = []
+    for node in base_node.iter_children():
+        added += len(regex_html_signs.findall(code[history_index:node.start])) * 3
+        if node.context_type in settings.comment_keyword:
+            added_special_chars = len(regex_html_signs.findall(code[node.start:node.end])) * 3
+            color_tag = '<span class="' + OZ_COMMENT_CLASS + '">'
+            source_code = insert(source_code, color_tag, node.start + added)
+            added += len(color_tag) + added_special_chars
+            source_code = insert(source_code, SPAN_END, node.end + added - 1)
+            added += SPAN_END_LEN
+            history_index = node.end
+        elif node.context_type in settings.oz_block_keywords:
+            color_tag = "<span class=\"" + OZ_KEYWORD_SIMPLE_CLASS + "\">"
+            source_code = insert(source_code, SPAN_END, node.start + len(node.context_type) + added)
+            source_code = insert(source_code, color_tag, node.start + added)
+            added += len(color_tag) + SPAN_END_LEN
+        elif node.context_type in settings.oz_simple_keywords:
+            color_tag = "<span class=\"" + OZ_KEYWORD_SIMPLE_CLASS + "\">"
+            source_code = insert(source_code, SPAN_END, node.start + len(node.context_type) + added)
+            source_code = insert(source_code, color_tag, node.start + added)
+            added += len(color_tag) + SPAN_END_LEN
+        # elif node.context_type == 'var':
+        #     color_tag = "<span class=\"" + OZ_ATOM_CLASS + "\">"
+        #     source_code = insert(source_code, SPAN_END, node.start + len(node.description) + added)
+        #     source_code = insert(source_code, color_tag, node.start + added)
+        #     added += len(color_tag) + SPAN_END_LEN
+        else:
+            history_index = node.start
+    all_ends = set(re.findall(r'[ \n\r\t]end[ \n\r\t%/]', source_code))
+    for x in all_ends:
+        source_code = source_code.replace(x, x[0] + "<span class=\"" + OZ_KEYWORD_SIMPLE_CLASS + "\">end</span>" + x[4])
+    fh.replace_in_file('@source_code', source_code, destination)
+
+    ###################################################################################################################
+    #                        Generating the head of the table containing all of the functions                         #
+    ###################################################################################################################
+    doc, tag, text = Doc().tagtext()
+    with tag('thead'):
+        with tag('tr'):
+            with tag('th'):
+                text('Function')
+            with tag('th'):
+                text('Type')
+            with tag('th'):
+                text('Description')
+    new_tablehead = indent(doc.getvalue())
+    fh.replace_in_file('@tablehead', new_tablehead, destination)
+
+    ###################################################################################################################
+    #                        Generating the body of the table containing all of the functions                         #
+    ###################################################################################################################
     doc, tag, text = Doc().tagtext()
     with tag('tbody'):
         for function in fun_repo:
@@ -68,8 +194,10 @@ def run(parser, settings, out):
             if funcname != '$':
                 with tag('tr'):
                     with tag('td'):
-                        with tag('a', href="#"+function[2]+str(function[0].node_id)):
+                        with tag('a', href="#" + function[2] + str(function[0].node_id)):
                             text(funcname)
+                    with tag('td'):
+                        text(function[0].context_type)
                     with tag('td'):
                         description = ""
                         prev_sister = function[0].find_previous_sister()
@@ -78,44 +206,18 @@ def run(parser, settings, out):
                                 description = code[prev_sister.start:prev_sister.end].split('\n')[0][:80]
                                 description = description.lstrip('/*% ').rstrip('/*% ')
                         text(description)
-                        node = function[0]
-                        context_hierarchy = ""
-                        link = ""
-                        if node.parent:
-                            node = node.parent
-                        while node.parent:
-                            if node.context_type in settings.fun_keyword:
-                                name = ""
-                                for repo_node in fun_repo:
-                                    if repo_node[0].start == node.start:
-                                        name = repo_node[2]
-                                        break
-                                context_hierarchy = node.context_type + '(' + name + ')' + link + context_hierarchy
-                            else:
-                                context_hierarchy = node.context_type + link + context_hierarchy
-                            node = node.parent
-                            link = " > "
-                        if node.description:
-                            filename = node.description.split('/')
-                            context_hierarchy = filename[len(filename) - 1] + link + context_hierarchy
+
+                        context_hierarchy = make_context_hierarchy(function[0], fun_repo, settings)
                         if context_hierarchy:
                             doc.stag('br')
-                            text('(from: '+context_hierarchy+')')
-    new_tablebody = doc.getvalue()
+                            with tag('i'):
+                                text('(from: ' + context_hierarchy + ')')
+    new_tablebody = indent(doc.getvalue())
     fh.replace_in_file('@tablebody', new_tablebody, destination)
 
-    # Generating the head of the table containing all of the functions.
-    doc, tag, text = Doc().tagtext()
-    with tag('thead'):
-        with tag('tr'):
-            with tag('th'):
-                text('Function')
-            with tag('th'):
-                text('Description')
-    new_tablehead = indent(doc.getvalue())
-    fh.replace_in_file('@tablehead', new_tablehead, destination)
-
-    # Generating the section containing the details of all of the functions.
+    ###################################################################################################################
+    #                     Generating the section containing the details of all of the functions                       #
+    ###################################################################################################################
     doc, tag, text, line = Doc().ttl()
     with tag('ul', klass='blockList'):
         with tag('li', klass='blockList'):
@@ -124,9 +226,9 @@ def run(parser, settings, out):
                     for function in fun_repo:
                         funcname = function[2]
                         if funcname != '$':
-                            line('h4', funcname, id=function[2]+str(function[0].node_id))
+                            line('h4', funcname, id=function[2] + str(function[0].node_id))
                             with tag('pre', style='font-style: italic;'):
-                                text(code[function[1].start:function[1].end])
+                                text(function[0].context_type + ' ' + code[function[1].start:function[1].end])
 
                                 # @TODO
                                 # Check if the @throws tag is used.
@@ -179,10 +281,13 @@ def run(parser, settings, out):
                             with tag('dt'):
                                 line('span', 'Source Code:', klass='codeLabel')
                             with tag('dd'):
-                                id = function[2]+str(function[0].node_id)+'code'
+                                id = function[2] + str(function[0].node_id) + 'code'
                                 line('button', 'Show', onclick='show' + id + '()')
-                                with tag('pre', id=id, style='display: none;'):
-                                    line('code', (code[function[0].start:function[0].end]))
+                                with tag('pre', id=id, style='display: none;', klass="oz-code"):
+                                    # line('code', (code[function[0].start:function[0].end]))
+                                    with tag('code'):
+                                        text(code[function[0].start:function[0].end])
+
                                 show_fun_def = 'function %s() {' \
                                                '  var x = document.getElementById("%s");' \
                                                '  if (x.style.display === "none") {' \
@@ -197,5 +302,142 @@ def run(parser, settings, out):
     fh.replace_in_file('@functiondetails', new_functiondetails, destination)
 
 
+def tag_found_in_comment(tag_searched, taglist):
+    for tag_found in taglist:
+        if tag_found[0] == tag_searched:
+            return True
+    return False
+
+
+def make_tagged_section(section_tag, section_name, section_label, taglist, end_of_comment, tag, text, line, code):
+    with tag('dt'):
+        line('span', '{}:'.format(section_name), klass=section_label)
+    for i in range(len(taglist)):
+        tag_found = taglist[i]
+        if tag_found[0] == section_tag:
+            start = tag_found[1]
+            end = taglist[i + 1][1] - 1 if i < (len(taglist) - 1) else end_of_comment
+
+            with tag('dd'):
+                with tag('code'):
+                    text('-- ')
+                text(code[start:end][(len(section_tag)):].rstrip(' ').rstrip('/*%'))
+
+
+def make_context_hierarchy(node, fun_repo, settings):
+    context_hierarchy = ""
+    link = ""
+    if node.parent:
+        node = node.parent
+    while node.parent:
+        if node.context_type in settings.fun_keyword:
+            name = ""
+            for repo_node in fun_repo:
+                if repo_node[0].start == node.start:
+                    name = repo_node[2]
+                    break
+            context_hierarchy = node.context_type + '(' + name + ')' + link + context_hierarchy
+        else:
+            context_hierarchy = node.context_type + link + context_hierarchy
+        node = node.parent
+        link = " > "
+    if node.description:
+        filename = REGEX_PATH_SPLIT.split(node.description)
+        context_hierarchy = filename[len(filename) - 1] + link + context_hierarchy
+    return context_hierarchy
+
+
+def gen_html_ast(tree, fold, ignore, settings):
+    AST_SIMPLE_KEYWORDS = settings.def_keyword + ['var', 'atom', 'string1', 'string2']
+
+    def rec_print(node, level, last, lines, folded):
+        ans = ""
+        for j in range(level):
+            if lines[j]:
+                ans += "&#9474;"  # "│"
+            else:
+                ans += " "
+            ans += " " * 9
+
+        if last:
+            ans += "&#9492;"  # "└"
+        else:
+            ans += "&#9500;"  # "├"
+
+        if node.context_type not in fold:
+            node_string = str(node)
+            if any(word in node_string for word in AST_SIMPLE_KEYWORDS):
+                node_string = replace_right_word(node_string, AST_SIMPLE_KEYWORDS, OZ_ATOM_CLASS)
+            elif any(word in node_string for word in settings.comment_keyword):
+                node_string = replace_right_word(node_string, settings.comment_keyword, OZ_COMMENT_CLASS_AST)
+            else:
+                node_string = replace_right_word(node_string, settings.oz_simple_keywords, OZ_KEYWORD_SIMPLE_CLASS)
+
+            ans += node_string
+            folded.append(False)
+        else:
+            node_string = str(node)
+            if 'file' in node_string:
+                node_string = wrap_color_class(node_string, OZ_FILE_CLASS)
+            else:
+                node_string = replace_right_word(node_string, settings.oz_block_keywords, OZ_KEYWORD_CLASS)
+            ans += "<button class=\"collapsible\">" + node_string + "</button><div class=\"content\">"
+            folded.append(True)
+
+        ans += "\n"
+
+        kids = []
+        for kid in node.children:
+            if kid.context_type not in ignore:
+                kids.append(kid)
+
+        for i in range(len(kids)):
+            if i == len(kids) - 1:
+                lines.append(False)
+                ans += rec_print(kids[i], level + 1, True, lines, folded)
+            else:
+                lines.append(True)
+                ans += rec_print(kids[i], level + 1, False, lines, folded)
+        del lines[-1]
+
+        if last:
+            for j in range(level):
+                if lines[j]:
+                    ans += "&#9474;"  # "│"
+                else:
+                    ans += " "
+                ans += " " * 9
+
+        if folded[-1]:
+            ans = ans[:-1] + "</div>\n"
+        elif last:
+            ans += "\n"
+        del folded[-1]
+        return ans
+
+    return rec_print(tree, 0, True, [False], [True])
+
+
+# Used by AST creator
+def replace_right_word(source_string, word_list, color_class):
+    for word in word_list:
+        if word in source_string:
+            return color_string(source_string, word, color_class)
+    return source_string
+
+
+def color_string(source_string, string_to_replace, color_class):
+    return source_string.replace(string_to_replace, wrap_color_class(string_to_replace, color_class))
+
+
+def wrap_color_class(string, color_class):
+    return "<span class=\"" + color_class + "\">" + string+"</span>"
+
+
+def insert(source_str, insert_str, pos):
+    return source_str[:pos]+insert_str+source_str[pos:]
+
+
 if __name__=="__main__":
-    print("Error: This script is part of the OzDoc framework and should not be ran alone. Please locate and run OzDoc.py")
+    print("Error: This script is part of the OzDoc framework and should not be ran alone. "
+          "Please locate and run OzDoc.py")

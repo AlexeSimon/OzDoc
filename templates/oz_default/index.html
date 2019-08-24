@@ -1,79 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <!--<meta charset="UTF-8">-->
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Javadoc highlight</title>
-    <link rel="stylesheet" href="./assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="./assets/css/style.css">
+    <title>@filename (OzDoc)</title>
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 
-    <header id="header">
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <div class="container">
-                <a class="navbar-brand" href="#">Navbar</a>
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
-                        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+<section id="description">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <h1>@filename</h1>
+                <hr>
+            </div>
+        </div>
+    </div>
+</section>
 
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav ml-auto">
-                        <li class="nav-item active">
-                            <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Link</a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                Dropdown
-                            </a>
-                            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                <a class="dropdown-item" href="#">Action</a>
-                                <a class="dropdown-item" href="#">Another action</a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="#">Something else here</a>
-                            </div>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
-                        </li>
-                    </ul>
+<section id="code">
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-3 w-25">
+                <div class="div border border-dark p-4">
+                    <div class="list-group">
+                        <!--<a href="#list-info" data-toggle="list" role="tab" aria-controls="info" class="list-group-item list-group-item-action active">Information</a>-->
+                        <a href="#list-ast" data-toggle="list" role="tab" aria-controls="ast" class="list-group-item list-group-item-action active">Abstract Syntax Tree</a>
+                        <a href="#list-code" data-toggle="list" role="tab" aria-controls="code" class="list-group-item list-group-item-action">Source Code</a>
+                    </div>
                 </div>
             </div>
-        </nav>
-    </header>
+            <div class="col-lg-9 w-75">
+                <div class="div border border-dark p-4">
+                    <!-- Il faut garder le code là sinon il ajoute des espaces -->
+                    <div class="tab-content" id="nav-tabContent">
+                        <!--<div class="tab-pane fade show active" id="list-info" role="tabpanel" aria-labelledby="list-info-list">-->
+                            <!--@general_info-->
+                        <!--</div>-->
 
-    <section id="description">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <h1>Class string</h1>
-                    <hr>
+                        <div class="tab-pane fade show active" id="list-ast" role="tabpanel" aria-labelledby="list-ast-list">
+                            @abstract_syntax_tree
+                            @abstract_syntax_tree_script
+                        </div>
+
+                        <div class="tab-pane fade" id="list-code" role="tabpanel" aria-labelledby="list-code-list">
+                                <pre class="oz-code">
+                                    @source_code
+                                </pre>
+                        </div>
+
+                    </div>
+
                 </div>
             </div>
         </div>
-    </section>
-    
-    <section id="tableaux" class="my-3">
-        <div class="container">
-            <table class="table table-striped">
-                @tablehead
-                @tablebody
-            </table>
-        </div>
-    </section>
+    </div>
 
-    <section id="function_details">
-        @functiondetails
-    </section>
+</section>
 
-    <script src="assets/js/jquery.min.js"></script>
-    <script src="assets/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/master.js"></script>
+<section id="tableaux" class="my-3">
+    <div class="container">
+        <table class="table table-striped">
+            @tablehead
+            @tablebody
+        </table>
+    </div>
+</section>
+
+<section id="function_details">
+    @functiondetails
+</section>
+
+@script_abstract_syntax_tree
+<script src="assets/js/jquery.min.js"></script>
+<script src="assets/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/master.js"></script>
 </body>
 </html>
