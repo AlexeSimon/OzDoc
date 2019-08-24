@@ -2,7 +2,7 @@
 
 A highly automated documentation generator (designed for the Oz programming language).
 
-[<img src="https://img.shields.io/badge/Python3-3.0+-blue.svg">](https://www.python.org/)
+[<img src="https://img.shields.io/badge/Python3-3.4+-blue.svg">](https://www.python.org/)
 
 This repository contains OzDoc, the fruit of a Master's thesis by ALEXE Simon and FRENYO Peter.
 While mainly designed for the Oz progrmaming language, OzDoc is a highly flexible tool that has been designed to be easily adaptable to different languages.
