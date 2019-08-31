@@ -189,7 +189,7 @@ def generate_code_doc(base_node, settings, destination):
     #                        Generating the head of the table containing all of the classes                           #
     ###################################################################################################################
     new_classtablehead = ""
-    if fun_repo:
+    if class_repo:
         doc, tag, text = Doc().tagtext()
         with tag('thead'):
             with tag('tr'):
