@@ -47,7 +47,5 @@ if __name__ == '__main__':
 
     FileHandler.copy_directory(args.template, args.out)
     docgen = FileHandler.import_module("docgen", args.docgen)
-    docgen.run(parser, settings, args.template, args.out)
-
+    docgen.run(parser, settings, args.out)
     # Exit successfully
-

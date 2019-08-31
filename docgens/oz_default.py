@@ -38,15 +38,15 @@ REGEX_PATH_SPLIT = re.compile("/|\\\\")
 gen_directory = ""
 
 
-def run(parser, settings, template, out):
+def run(parser, settings, out):
     global gen_directory
     gen_directory = out
     if parser.base_node.context_type == 'dir':
-        generate_directory_doc(parser.base_node, settings, template, out)
+        generate_directory_doc(parser.base_node, settings, out)
     elif parser.base_node.context_type == 'file':
-        generate_file_doc(parser.base_node, settings, template, out)
+        generate_file_doc(parser.base_node, settings, out)
     elif parser.base_node.context_type == 'text':
-        generate_file_doc(parser.base_node, settings, template, out)
+        generate_file_doc(parser.base_node, settings, out)
     else:
         raise Exception("An error has occured. Expected 'file', 'dir' or 'text' as top node of the tree, got: {}.")\
             .format(parser.base_node.context_type)
@@ -57,7 +57,7 @@ def run(parser, settings, template, out):
             os.remove(Path(out + '/index.html'))
 
 
-def generate_directory_doc(base_node, settings, template, out, prepend=""):
+def generate_directory_doc(base_node, settings, out, prepend=""):
     dirname = REGEX_PATH_SPLIT.split(base_node.description)
     dirname = dirname[len(dirname) - 1]
     new_out = out + '/' + dirname
@@ -66,12 +66,12 @@ def generate_directory_doc(base_node, settings, template, out, prepend=""):
 
     for child in base_node.children:
         if child.context_type == 'dir':
-            generate_directory_doc(child, settings, template, new_out, "../"+prepend)
+            generate_directory_doc(child, settings, new_out, "../"+prepend)
         else:
-            generate_file_doc(child, settings, template, new_out, "../"+prepend)
+            generate_file_doc(child, settings, new_out, "../"+prepend)
 
 
-def generate_file_doc(base_node, settings, template, out, prepend=""):
+def generate_file_doc(base_node, settings, out, prepend=""):
     filename = base_node.context_type
     destination = out + '/index.html'
 
@@ -81,7 +81,7 @@ def generate_file_doc(base_node, settings, template, out, prepend=""):
         destination = out + '/' + filename[:len(filename) - 3] + '.html'
 
     destination = Path(destination)
-    fh.copy_file(Path(template+'/index.html'), destination)
+    fh.copy_file(Path(gen_directory+'/index.html'), destination)
 
     fh.replace_in_file("assets/", prepend+"assets/", destination, replace_all=True)
     fh.replace_in_file('@filename', filename, destination, replace_all=True)
