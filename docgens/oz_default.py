@@ -17,7 +17,6 @@ import src.ListTools as ListTools
 import src.PrintTools as PrintTools
 import re
 import os
-import html
 from yattag import Doc, indent
 from pathlib import Path
 from src import FileHandler as fh
@@ -32,6 +31,7 @@ OZ_KEYWORD_SIMPLE_CLASS = 'oz_keyword_simple'
 OZ_ATOM_CLASS = 'oz_atom'
 OZ_COMMENT_CLASS = 'oz_comment'
 OZ_COMMENT_CLASS_AST = 'oz_comment_ast'
+SHOW_BUTTON_CLASS = 'showCodeButton'
 SPAN_END = "</span>"
 SPAN_END_LEN = len(SPAN_END)
 REGEX_PATH_SPLIT = re.compile("/|\\\\")
@@ -39,6 +39,8 @@ gen_directory = ""
 
 
 def run(parser, settings, out):
+    # parser.print_tree()
+
     global gen_directory
     gen_directory = out
     if parser.base_node.context_type == 'dir':
@@ -91,17 +93,7 @@ def generate_file_doc(base_node, settings, out, prepend=""):
 
 def generate_code_doc(base_node, settings, destination):
     code = base_node.code
-
-    regex_html_signs = re.compile(r'<|>|&')  # alternate: (r'&lt;|&gt;|&amp;')
-
     OzDocParser.fuse_similar_successive_contexts(base_node, settings.inline_comment_keyword)
-
-    ###################################################################################################################
-    #                               Creation of the repository of all classes                                         #
-    ###################################################################################################################
-    class_repo = OzDocParser.build_link_context_with_repo(base_node, settings.class_keyword, ['{'])
-    OzDocParser.link_following_regex_to_repo(base_node, class_repo, settings.fun_regex,
-                                             exception=settings.comment_keyword)
 
     ###################################################################################################################
     #                      Creation of the repository of all functions, and function calls                            #
@@ -118,6 +110,10 @@ def generate_code_doc(base_node, settings, destination):
     ###################################################################################################################
     comment_repo = OzDocParser.build_context_repo(base_node, settings.comment_keyword)
     OzDocParser.link_all_regex_to_repo(base_node, comment_repo, settings.ozdoc_tag_regex)
+
+    class_repo = OzDocParser.build_link_context_with_repo(base_node, settings.class_keyword, ['{'])
+    OzDocParser.link_following_regex_to_repo(base_node, class_repo, settings.fun_regex,
+                                             exception=settings.comment_keyword)
 
     ###################################################################################################################
     #                                     Generating abstract syntax tree                                             #
@@ -137,59 +133,17 @@ def generate_code_doc(base_node, settings, destination):
     #                                          Generating source code                                                 #
     ###################################################################################################################
     doc, tag, text = Doc().tagtext()
-    with tag('pre'):
-        with tag('code'):
+    with tag('pre', klass='line-numbers'):
+        with tag('code', klass='language-oz'):
             text(code)
     source_code = doc.getvalue()
-
-    added = len('<pre><code>')
-    history_index = 0
-    ends = []
-
-    for node in base_node.iter_children():
-
-        html_signs = regex_html_signs.findall(code[history_index:node.start])
-        for char in html_signs:
-            added += len(html.escape(char)) - len(char)
-
-        if node.context_type in settings.comment_keyword:
-            added_html_chars = regex_html_signs.findall(code[node.start:node.end])
-            len_extra = 0
-            for char in added_html_chars:
-                len_extra += len(html.escape(char)) - len(char)
-            color_tag = '<span class="' + OZ_COMMENT_CLASS + '">'
-            source_code = insert(source_code, color_tag, node.start + added)
-            added += len(color_tag) + len_extra
-            source_code = insert(source_code, SPAN_END, node.end + added - 1)
-            added += SPAN_END_LEN
-            history_index = node.end
-        elif node.context_type in settings.oz_block_keywords:
-            color_tag = "<span class=\"" + OZ_KEYWORD_SIMPLE_CLASS + "\">"
-            source_code = insert(source_code, SPAN_END, node.start + len(node.context_type) + added)
-            source_code = insert(source_code, color_tag, node.start + added)
-            added += len(color_tag) + SPAN_END_LEN
-        elif node.context_type in settings.oz_simple_keywords:
-            color_tag = "<span class=\"" + OZ_KEYWORD_SIMPLE_CLASS + "\">"
-            source_code = insert(source_code, SPAN_END, node.start + len(node.context_type) + added)
-            source_code = insert(source_code, color_tag, node.start + added)
-            added += len(color_tag) + SPAN_END_LEN
-        # elif node.context_type == 'var':
-        #     color_tag = "<span class=\"" + OZ_ATOM_CLASS + "\">"
-        #     source_code = insert(source_code, SPAN_END, node.start + len(node.description) + added)
-        #     source_code = insert(source_code, color_tag, node.start + added)
-        #     added += len(color_tag) + SPAN_END_LEN
-        else:
-            history_index = node.start
-    all_ends = set(re.findall(r'[ \n\r\t]end[ \n\r\t%/]', source_code))
-    for x in all_ends:
-        source_code = source_code.replace(x, x[0] + "<span class=\"" + OZ_KEYWORD_SIMPLE_CLASS + "\">end</span>" + x[4])
     fh.replace_in_file('@source_code', source_code, destination)
 
     ###################################################################################################################
     #                        Generating the head of the table containing all of the classes                           #
     ###################################################################################################################
     new_classtablehead = ""
-    if class_repo:
+    if fun_repo:
         doc, tag, text = Doc().tagtext()
         with tag('thead'):
             with tag('tr'):
@@ -265,7 +219,7 @@ def generate_code_doc(base_node, settings, destination):
                         prev_sister = function[0].find_previous_sister()
                         if prev_sister:
                             if prev_sister.context_type in settings.comment_keyword:  # if previous sister is a comment
-                                description = code[prev_sister.start:prev_sister.end].split('\n')[0][:80]
+                                description = code[prev_sister.start:prev_sister.end].split('\n')[0][:200]
                                 description = description.lstrip('/*% ').rstrip('/*% ')
                         text(description)
 
@@ -340,14 +294,15 @@ def generate_code_doc(base_node, settings, destination):
                                                                     tag, text, line, code)
 
                             # Making the button to show the Source Code.
-                            with tag('dt'):
-                                line('span', 'Source Code:', klass='codeLabel')
+                            # with tag('dt'):
+                            #     line('span', 'Source Code:', klass='codeLabel')
                             with tag('dd'):
-                                id = function[2] + str(function[0].node_id) + 'code'
-                                line('button', 'Show', onclick='show' + id + '()')
-                                with tag('pre', id=id, style='display: none;', klass="oz-code"):
+                                fun_id = function[2] + str(function[0].node_id) + 'code'
+                                line('button', 'Source Code', onclick='show' + fun_id + '()', klass=SHOW_BUTTON_CLASS)
+                                with tag('pre', ('data-start', str(function[0].line_start)),
+                                         id=fun_id, style='display: none;', klass="line-numbers"):
                                     # line('code', (code[function[0].start:function[0].end]))
-                                    with tag('code'):
+                                    with tag('code', klass='language-oz'):
                                         text(code[function[0].start:function[0].end])
 
                                 show_fun_def = 'function %s() {' \
@@ -357,7 +312,7 @@ def generate_code_doc(base_node, settings, destination):
                                                '  } else {' \
                                                '    x.style.display = "none";' \
                                                '   }' \
-                                               '}' % ('show' + id, id)
+                                               '}' % ('show' + fun_id, fun_id)
                                 line('script', show_fun_def)
 
     new_functiondetails = indent(doc.getvalue())
@@ -494,10 +449,6 @@ def color_string(source_string, string_to_replace, color_class):
 
 def wrap_color_class(string, color_class):
     return "<span class=\"" + color_class + "\">" + string+"</span>"
-
-
-def insert(source_str, insert_str, pos):
-    return source_str[:pos]+insert_str+source_str[pos:]
 
 
 if __name__=="__main__":
