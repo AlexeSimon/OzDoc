@@ -40,4 +40,5 @@ def parse_args(args=None):
         return arg_parser.parse_args(args)
 
 if __name__=="__main__":
-    print("Error: This script is part of the OzDoc framework and should not be ran alone. Please locate and run OzDoc.py")
+    print("Error: This script is part of the OzDoc framework and should not be ran alone. "
+          "Please locate and run OzDoc.py")

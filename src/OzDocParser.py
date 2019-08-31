@@ -18,6 +18,8 @@ from src import FileHandler, StringTools, ListTools
 import os
 from src.ParseEval import eval_rule
 
+regex_type = type(re.compile(''))
+
 
 def fuse_similar_successive_contexts(node, context_type):
     # example : comments contexts on the same line or on consecutive lines should be fused into blocks
@@ -67,9 +69,8 @@ def build_context_repo_not_in(node, context, repo2, repo=None):
     return repo
 
 
-def build_line_repo(node, repo=None):
+def build_line_repo(node):
     line_repo = [[] for i in range(node.line_end)]
-    line_index = 0
     line_offset = node.line_start
     for child_node in node.iter_children():
         if child_node not in line_repo[child_node.line_start-line_offset]:
@@ -97,7 +98,10 @@ def build_link_context_with_repo(node, context1, context2, repo=None):
 
 
 def link_following_regex_to_repo(node, repo, regex, exception=None):
-    p = re.compile(regex)
+    if not isinstance(regex, regex_type):
+        p = re.compile(regex)
+    else:
+        p = regex
     is_multi_d = isinstance(repo[0], list) if repo else False
     for i in range(len(repo)):
         if is_multi_d:  # if it is a list, we use the last column
@@ -116,7 +120,10 @@ def link_following_regex_to_repo(node, repo, regex, exception=None):
 
 
 def link_all_regex_to_repo(node, repo, regex, exception=None):
-    p = re.compile(regex)
+    if not isinstance(regex, regex_type):
+        p = re.compile(regex)
+    else:
+        p = regex
     is_multi_d = isinstance(repo[0], list) if repo else False
     for i in range(len(repo)):
         if is_multi_d:  # if it is a list, we use the last column
@@ -136,7 +143,10 @@ def link_all_regex_to_repo(node, repo, regex, exception=None):
 def build_regex_dict(node, regex, exception=None, dict_repo=None, ):
     if dict_repo is None:
         dict_repo = {}
-    p = re.compile(regex)
+    if not isinstance(regex, regex_type):
+        p = re.compile(regex)
+    else:
+        p = regex
     for m in p.finditer(node.code):
         context = node.lowest_context_for_char(m.start())
         if exception is None or context.context_type not in exception:
