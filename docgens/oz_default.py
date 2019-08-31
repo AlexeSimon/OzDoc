@@ -32,15 +32,11 @@ OZ_ATOM_CLASS = 'oz_atom'
 OZ_COMMENT_CLASS = 'oz_comment'
 OZ_COMMENT_CLASS_AST = 'oz_comment_ast'
 SHOW_BUTTON_CLASS = 'showCodeButton'
-SPAN_END = "</span>"
-SPAN_END_LEN = len(SPAN_END)
 REGEX_PATH_SPLIT = re.compile("/|\\\\")
 gen_directory = ""
 
 
 def run(parser, settings, out):
-    # parser.print_tree()
-
     global gen_directory
     gen_directory = out
     if parser.base_node.context_type == 'dir':
@@ -83,7 +79,9 @@ def generate_file_doc(base_node, settings, out, prepend=""):
         destination = out + '/' + filename[:len(filename) - 3] + '.html'
 
     destination = Path(destination)
-    fh.copy_file(Path(gen_directory+'/index.html'), destination)
+    template_location = Path(gen_directory+'/index.html')
+    if template_location != destination:
+        fh.copy_file(template_location, destination)
 
     fh.replace_in_file("assets/", prepend+"assets/", destination, replace_all=True)
     fh.replace_in_file('@filename', filename, destination, replace_all=True)
