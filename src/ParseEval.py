@@ -12,6 +12,9 @@ License: GNU GPL
 
 """
 
+import re
+regex_type = type(re.compile(''))
+
 evalfun = {}
 
 
@@ -33,6 +36,8 @@ def eval_rule_text(node, offset, rule_string):
 
 
 def eval_rule_regex(node, offset, regex):
+    if not isinstance(regex, regex_type):
+        regex = re.compile(regex)
     ans = regex.match(node.code[offset:])
     if ans is not None:
         return ans.group(0)
@@ -41,6 +46,8 @@ def eval_rule_regex(node, offset, regex):
 
 
 def eval_regex_text(node, offset, regex):
+    if not isinstance(regex, regex_type):
+        regex = re.compile(regex)
     ans = regex.match(node.code[offset:])
     if ans is not None:
         found_string = ans.group(0)

@@ -17,6 +17,7 @@ import src.ListTools as ListTools
 import src.PrintTools as PrintTools
 import re
 import os
+import html
 from yattag import Doc, indent
 from pathlib import Path
 from src import FileHandler as fh
@@ -50,9 +51,10 @@ def run(parser, settings, template, out):
         raise Exception("An error has occured. Expected 'file', 'dir' or 'text' as top node of the tree, got: {}.")\
             .format(parser.base_node.context_type)
 
-    base_node_name = REGEX_PATH_SPLIT.split(parser.base_node.description)
-    if base_node_name[len(base_node_name) - 1] != 'index.oz':
-        os.remove(Path(out + '/index.html'))
+    if parser.base_node.description:
+        base_node_name = REGEX_PATH_SPLIT.split(parser.base_node.description)
+        if base_node_name[len(base_node_name) - 1] != 'index.oz':
+            os.remove(Path(out + '/index.html'))
 
 
 def generate_directory_doc(base_node, settings, template, out, prepend=""):
@@ -90,9 +92,16 @@ def generate_file_doc(base_node, settings, template, out, prepend=""):
 def generate_code_doc(base_node, settings, destination):
     code = base_node.code
 
-    regex_html_signs = re.compile(r'<|>')  # alternate: (r'&lt;|&gt;')
+    regex_html_signs = re.compile(r'<|>|&')  # alternate: (r'&lt;|&gt;|&amp;')
 
     OzDocParser.fuse_similar_successive_contexts(base_node, settings.inline_comment_keyword)
+
+    ###################################################################################################################
+    #                               Creation of the repository of all classes                                         #
+    ###################################################################################################################
+    class_repo = OzDocParser.build_link_context_with_repo(base_node, settings.class_keyword, ['{'])
+    OzDocParser.link_following_regex_to_repo(base_node, class_repo, settings.fun_regex,
+                                             exception=settings.comment_keyword)
 
     ###################################################################################################################
     #                      Creation of the repository of all functions, and function calls                            #
@@ -109,15 +118,14 @@ def generate_code_doc(base_node, settings, destination):
     ###################################################################################################################
     comment_repo = OzDocParser.build_context_repo(base_node, settings.comment_keyword)
     OzDocParser.link_all_regex_to_repo(base_node, comment_repo, settings.ozdoc_tag_regex)
-    # PrintTools.print_repo(comment_repo)
 
     ###################################################################################################################
     #                                     Generating abstract syntax tree                                             #
     ###################################################################################################################
     doc, tag, text = Doc().tagtext()
     with tag('pre', klass='oz-code'):
-        doc.asis(gen_html_ast(base_node, ["file"] + settings.oz_block_keywords, ["\'", "\"", "`"], settings))
-    ast = indent(doc.getvalue())
+        doc.asis(gen_html_ast(base_node, ["dir", "file", "text"] + settings.oz_block_keywords, ["\'", "\"", "`"], settings))
+    ast = doc.getvalue()
     fh.replace_in_file('@abstract_syntax_tree', ast, destination)
 
     doc, tag, text = Doc().tagtext()
@@ -137,13 +145,21 @@ def generate_code_doc(base_node, settings, destination):
     added = len('<pre><code>')
     history_index = 0
     ends = []
+
     for node in base_node.iter_children():
-        added += len(regex_html_signs.findall(code[history_index:node.start])) * 3
+
+        html_signs = regex_html_signs.findall(code[history_index:node.start])
+        for char in html_signs:
+            added += len(html.escape(char)) - len(char)
+
         if node.context_type in settings.comment_keyword:
-            added_special_chars = len(regex_html_signs.findall(code[node.start:node.end])) * 3
+            added_html_chars = regex_html_signs.findall(code[node.start:node.end])
+            len_extra = 0
+            for char in added_html_chars:
+                len_extra += len(html.escape(char)) - len(char)
             color_tag = '<span class="' + OZ_COMMENT_CLASS + '">'
             source_code = insert(source_code, color_tag, node.start + added)
-            added += len(color_tag) + added_special_chars
+            added += len(color_tag) + len_extra
             source_code = insert(source_code, SPAN_END, node.end + added - 1)
             added += SPAN_END_LEN
             history_index = node.end
@@ -170,19 +186,65 @@ def generate_code_doc(base_node, settings, destination):
     fh.replace_in_file('@source_code', source_code, destination)
 
     ###################################################################################################################
-    #                        Generating the head of the table containing all of the functions                         #
+    #                        Generating the head of the table containing all of the classes                           #
+    ###################################################################################################################
+    new_classtablehead = ""
+    if fun_repo:
+        doc, tag, text = Doc().tagtext()
+        with tag('thead'):
+            with tag('tr'):
+                with tag('th'):
+                    text('Class')
+                with tag('th'):
+                    text('Description')
+        new_classtablehead = indent(doc.getvalue())
+    fh.replace_in_file('@classtablehead', new_classtablehead, destination)
+
+    ###################################################################################################################
+    #                        Generating the body of the table containing all of the classes                           #
     ###################################################################################################################
     doc, tag, text = Doc().tagtext()
-    with tag('thead'):
-        with tag('tr'):
-            with tag('th'):
-                text('Function')
-            with tag('th'):
-                text('Type')
-            with tag('th'):
-                text('Description')
-    new_tablehead = indent(doc.getvalue())
-    fh.replace_in_file('@tablehead', new_tablehead, destination)
+    with tag('tbody'):
+        for klass in class_repo:
+            klassname = klass[2]
+            if klassname != '$':
+                with tag('tr'):
+                    with tag('td'):
+                        with tag('a', href="#" + klass[2] + str(klass[0].node_id)):
+                            text(klassname)
+                    with tag('td'):
+                        description = ""
+                        prev_sister = klass[0].find_previous_sister()
+                        if prev_sister:
+                            if prev_sister.context_type in settings.comment_keyword:  # if previous sister is a comment
+                                description = code[prev_sister.start:prev_sister.end].split('\n')[0][:80]
+                                description = description.lstrip('/*% ').rstrip('/*% ')
+                        text(description)
+
+                        context_hierarchy = make_context_hierarchy(klass[0], fun_repo, settings)
+                        if context_hierarchy:
+                            doc.stag('br')
+                            with tag('i'):
+                                text('(from: ' + context_hierarchy + ')')
+    new_classtablebody = indent(doc.getvalue())
+    fh.replace_in_file('@classtablebody', new_classtablebody, destination)
+
+    ###################################################################################################################
+    #                        Generating the head of the table containing all of the functions                         #
+    ###################################################################################################################
+    new_functablehead = ""
+    if fun_repo:
+        doc, tag, text = Doc().tagtext()
+        with tag('thead'):
+            with tag('tr'):
+                with tag('th'):
+                    text('Function')
+                with tag('th'):
+                    text('Type')
+                with tag('th'):
+                    text('Description')
+        new_functablehead = indent(doc.getvalue())
+    fh.replace_in_file('@functablehead', new_functablehead, destination)
 
     ###################################################################################################################
     #                        Generating the body of the table containing all of the functions                         #
@@ -212,8 +274,8 @@ def generate_code_doc(base_node, settings, destination):
                             doc.stag('br')
                             with tag('i'):
                                 text('(from: ' + context_hierarchy + ')')
-    new_tablebody = indent(doc.getvalue())
-    fh.replace_in_file('@tablebody', new_tablebody, destination)
+    new_functablebody = indent(doc.getvalue())
+    fh.replace_in_file('@functablebody', new_functablebody, destination)
 
     ###################################################################################################################
     #                     Generating the section containing the details of all of the functions                       #
@@ -367,11 +429,11 @@ def gen_html_ast(tree, fold, ignore, settings):
         if node.context_type not in fold:
             node_string = str(node)
             if any(word in node_string for word in AST_SIMPLE_KEYWORDS):
-                node_string = replace_right_word(node_string, AST_SIMPLE_KEYWORDS, OZ_ATOM_CLASS)
+                node_string = replace_adequate_word(node_string, AST_SIMPLE_KEYWORDS, OZ_ATOM_CLASS)
             elif any(word in node_string for word in settings.comment_keyword):
-                node_string = replace_right_word(node_string, settings.comment_keyword, OZ_COMMENT_CLASS_AST)
+                node_string = replace_adequate_word(node_string, settings.comment_keyword, OZ_COMMENT_CLASS_AST)
             else:
-                node_string = replace_right_word(node_string, settings.oz_simple_keywords, OZ_KEYWORD_SIMPLE_CLASS)
+                node_string = replace_adequate_word(node_string, settings.oz_simple_keywords, OZ_KEYWORD_SIMPLE_CLASS)
 
             ans += node_string
             folded.append(False)
@@ -380,7 +442,7 @@ def gen_html_ast(tree, fold, ignore, settings):
             if 'file' in node_string:
                 node_string = wrap_color_class(node_string, OZ_FILE_CLASS)
             else:
-                node_string = replace_right_word(node_string, settings.oz_block_keywords, OZ_KEYWORD_CLASS)
+                node_string = replace_adequate_word(node_string, settings.oz_block_keywords, OZ_KEYWORD_CLASS)
             ans += "<button class=\"collapsible\">" + node_string + "</button><div class=\"content\">"
             folded.append(True)
 
@@ -419,7 +481,7 @@ def gen_html_ast(tree, fold, ignore, settings):
 
 
 # Used by AST creator
-def replace_right_word(source_string, word_list, color_class):
+def replace_adequate_word(source_string, word_list, color_class):
     for word in word_list:
         if word in source_string:
             return color_string(source_string, word, color_class)

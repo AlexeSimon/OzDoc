@@ -18,6 +18,7 @@ from src import FileHandler, StringTools, ListTools
 import os
 from src.ParseEval import eval_rule
 
+
 def fuse_similar_successive_contexts(node, context_type):
     # example : comments contexts on the same line or on consecutive lines should be fused into blocks
     # how to find them? They are at the same level (same parent) and end of one is start of other and
@@ -97,7 +98,7 @@ def build_link_context_with_repo(node, context1, context2, repo=None):
 
 def link_following_regex_to_repo(node, repo, regex, exception=None):
     p = re.compile(regex)
-    is_multi_d = isinstance(repo[0], list)
+    is_multi_d = isinstance(repo[0], list) if repo else False
     for i in range(len(repo)):
         if is_multi_d:  # if it is a list, we use the last column
             context = repo[i][-1]
@@ -116,7 +117,7 @@ def link_following_regex_to_repo(node, repo, regex, exception=None):
 
 def link_all_regex_to_repo(node, repo, regex, exception=None):
     p = re.compile(regex)
-    is_multi_d = isinstance(repo[0], list)
+    is_multi_d = isinstance(repo[0], list) if repo else False
     for i in range(len(repo)):
         if is_multi_d:  # if it is a list, we use the last column
             context = repo[i][-1]
@@ -161,13 +162,6 @@ class OzDocParser:
         #  default rules are for Oz
         self.priority_context_rules = priority_context_rules
         self.context_rules = context_rules
-
-        for rule in self.priority_context_rules + self.context_rules:
-            if rule[1] == "regex" or rule[1] == "varregex":
-                rule[2] = re.compile(rule[2])
-            if rule[3] == "regex" or rule[3] == "varregex":
-                rule[4] = re.compile(rule[4])
-
         self.build_abstract_syntax_tree(self.base_node)
 
     def priority_rule_check_open(self, main_node, rules, current_context, offset, line):
@@ -295,5 +289,6 @@ class OzDocParser:
         return self.base_node.repr_tree()
 
 
-if __name__=="__main__":
-    print("Error: This script is part of the OzDoc framework and should not be ran alone. Please locate and run OzDoc.py")
+if __name__ == "__main__":
+    print("Error: This script is part of the OzDoc framework and should not be ran alone. "
+          "Please locate and run OzDoc.py")

@@ -11,10 +11,13 @@ Version : 1.0
 License: GNU GPL
 
 """
+import re
+
 oz_block_keywords = ["case", "choice", "class", "for", "functor", "fun", "if", "local", "lock", "meth",
                      "proc", "raise", "thread", "try"]
 oz_simple_keywords = ["andthen", "at", "attr", "break", "catch", "declare", "define", "else", "elseif",
                       "finally", "from", "import", "in", "of", "then"]
+#oz_html = [" > ", " < ", "&"]
 
 
 def oz_block_keyword(keyword):
@@ -39,11 +42,13 @@ priority_context_rules = [
 context_rules = [
                 ["{", "symbol", "{", "symbol", "}"],
                 ["[]", "symbol", "[]", "empty", ""],
-                ["var", "varregex", "[A-Z][A-Za-z0-9]*", "empty", ""]
+                ["var", "varregex", re.compile(r"[A-Z][A-Za-z0-9]*"), "empty", ""]
                 ] \
                 + oz_generate_context_rules(oz_block_keywords, oz_block_keyword)\
                 + oz_generate_context_rules(oz_simple_keywords, oz_simple_keyword)\
-                + [["atom", "regex", "[a-z][A-Za-z0-9]*", "empty", ""]]
+                + [["atom", "regex", re.compile(r"[a-z][A-Za-z0-9]*"), "empty", ""]]
+                #+ oz_generate_context_rules(oz_html, oz_simple_keyword)\
+
                 #["atom", "text", "atom", "regex", "[a-z]*\(", "\)"],
                 #[":", "regex", "[a-z0-9]*:[ ]*", "regex", "(?![a-zA-Z0-9 ])"],
 

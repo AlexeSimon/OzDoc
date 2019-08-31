@@ -63,11 +63,15 @@
 
 </section>
 
-<section id="tableaux" class="my-3">
+<section id="tables" class="my-3">
     <div class="container">
         <table class="table table-striped">
-            @tablehead
-            @tablebody
+            @classtablehead
+            @classtablebody
+        </table>
+        <table class="table table-striped">
+            @functablehead
+            @functablebody
         </table>
     </div>
 </section>
@@ -76,7 +80,6 @@
     @functiondetails
 </section>
 
-@script_abstract_syntax_tree
 <script src="assets/js/jquery.min.js"></script>
 <script src="assets/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/master.js"></script>
