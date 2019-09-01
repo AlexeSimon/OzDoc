@@ -103,6 +103,12 @@ def generate_code_doc(base_node, settings, destination):
     call_repo = OzDocParser.build_context_repo_not_in(base_node, settings.def_keyword,
                                                       ListTools.get_list_column(fun_repo, 1))
 
+    meth_repo = OzDocParser.build_context_repo(base_node, settings.meth_keyword)
+    OzDocParser.link_following_regex_to_repo(base_node, meth_repo, settings.meth_regex,
+                                             exception=settings.comment_keyword)
+
+    # PrintTools.print_repo(meth_repo)
+
     ###################################################################################################################
     #                               Creation of the repository of all comments                                        #
     ###################################################################################################################

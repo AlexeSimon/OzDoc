@@ -56,7 +56,8 @@ context_rules = [
 
 comment_keyword = ["comment_line", 'comment_block']
 inline_comment_keyword = ["comment_line"]
-fun_keyword = ["fun", "proc", "meth"]
+fun_keyword = ["fun", "proc"]
+meth_keyword = ["meth"]
 def_keyword = ["{"]#, "[a-z][A-Za-z0-9]*"]
 class_keyword = ["class"]
 
@@ -64,11 +65,13 @@ class_keyword = ["class"]
 
 ozdoc_tag_regex = "@([a-z])*"
 fun_regex = "([A-Z][A-Za-z0-9]*)|(`.*`)|(\$)"
+meth_regex = "(?!meth)([A-Za-z0-9]*)|(`.*`)"
 variable_regex = "([A-Z][A-Za-z0-9]*)|(`.*`)"
+
+#meth_regex = "([A-Za-z0-9]*)"
 
 # Exception
 variable_exception = ["/*", "%", "\'", "\""]
 
 if __name__=="__main__":
-    print("Error: This script is part of the OzDoc framework and should not be ran alone. "
-          "Please locate and run OzDoc.py")
+    print("Error: This script is part of the OzDoc framework and should not be ran alone. Please locate and run OzDoc.py")
