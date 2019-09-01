@@ -15,6 +15,10 @@ License: GNU GPL
 import argparse
 import sys
 
+DEFAULT_SETTINGS = "settings/oz_default.py"
+DEFAULT_TEMPLATE = "templates/oz_default"
+DEFAULT_DOCGEN = "docgens/oz_default.py"
+
 arg_parser = argparse.ArgumentParser(description='Generates documentation (for Oz code by default).')
 group = arg_parser.add_mutually_exclusive_group(required=True)
 group.add_argument("file", nargs="?", action="append", help="specify input file")
@@ -23,12 +27,12 @@ group.add_argument("-d", "--dir", action="store", help="specify input directory"
 group.add_argument("-t", "--text", action="store", help="specify input text ")
 arg_parser.add_argument("-o", "--out", action="store", default="generated_doc",
                         help="specify output destination (default: generated_doc")
-arg_parser.add_argument("-s", "--settings", action="store", default=sys.argv[0].rstrip("OzDoc.py")+"settings/oz_default.py",
-                        help="specify setting file (default: settings/oz_default.py)")
-arg_parser.add_argument("--template", action="store", default=sys.argv[0].rstrip("OzDoc.py")+"templates/oz_default",
-                        help="specify documentation template directory (default: templates/oz_default")
-arg_parser.add_argument("--docgen", action="store", default=sys.argv[0].rstrip("OzDoc.py")+"docgens/oz_default.py",
-                        help="specify documentation generating code (default: docgens/oz_default.py")
+arg_parser.add_argument("-s", "--settings", action="store", default=sys.argv[0].rstrip("OzDoc.py")+DEFAULT_SETTINGS,
+                        help="specify setting file (default: "+DEFAULT_SETTINGS+")")
+arg_parser.add_argument("--template", action="store", default=sys.argv[0].rstrip("OzDoc.py")+DEFAULT_TEMPLATE,
+                        help="specify documentation template directory (default: "+DEFAULT_TEMPLATE+")")
+arg_parser.add_argument("--docgen", action="store", default=sys.argv[0].rstrip("OzDoc.py")+DEFAULT_DOCGEN,
+                        help="specify documentation generating code (default: "+DEFAULT_DOCGEN+")")
 
 
 def parse_args(args=None):
@@ -38,6 +42,7 @@ def parse_args(args=None):
         return arg_parser.parse_args(args.split())
     else:
         return arg_parser.parse_args(args)
+
 
 if __name__=="__main__":
     print("Error: This script is part of the OzDoc framework and should not be ran alone. "

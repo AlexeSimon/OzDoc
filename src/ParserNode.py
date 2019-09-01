@@ -12,6 +12,7 @@ License: GNU GPL
 
 """
 
+
 class ParserNode:
 
     def __init__(self, node_id=None, context_type=None, parent=None, children=None, start=None, end=None, line_start=None, line_end=None, description=None, code=None, line_repo=None):
@@ -73,7 +74,7 @@ class ParserNode:
         ans = str(self.context_type)
 
         if self.description is not None:
-            ans += " (" + str(self.description) + ")"
+            ans += " (" + self.description.replace("\n", "\\n") + ")"
 
         if self.line_start is not None and self.line_end is not None:
             ans += " @L[" + str(self.line_start) + ":" + str(self.line_end) + "]"\

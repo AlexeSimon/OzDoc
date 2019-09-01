@@ -18,6 +18,7 @@ from src.OzDocParser import OzDocParser
 from src.ArgumentsHandler import parse_args
 from src import FileHandler
 
+
 if __name__ == '__main__':
 
     # Recover program arguments (file, dir, text, out, settings, template, docgen)
