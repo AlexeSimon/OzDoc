@@ -229,14 +229,14 @@ class OzDocParser:
         return self.id_count
 
     def build_abstract_syntax_tree_dir(self, main_dir):
-        print(main_dir.description)
-        for dirName, subdirList, file_list in FileHandler.walklevel(main_dir.description):
-            for subdir in subdirList:
-                next_dir = main_dir.open_new_context(self.next_node_id(), "dir", description=os.path.join(dirName, subdir))
-                self.build_abstract_syntax_tree_dir(next_dir)
+        for dirName, subdirList, file_list in FileHandler.walklevel(main_dir.description, level=0):
             for file_name in file_list:
                 child = main_dir.open_new_context(self.next_node_id(), "file", description=os.path.join(dirName, file_name))
                 self.build_abstract_syntax_tree(child)
+            for subdir in subdirList:
+                next_dir = main_dir.open_new_context(self.next_node_id(), "dir", description=os.path.join(dirName, subdir))
+                self.build_abstract_syntax_tree_dir(next_dir)
+
 
     def build_abstract_syntax_tree(self, main_node):
 
