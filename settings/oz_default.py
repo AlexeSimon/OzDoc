@@ -15,7 +15,7 @@ import re
 
 oz_block_keywords = ["case", "choice", "class", "for", "functor", "fun", "if", "local", "lock", "meth",
                      "proc", "raise", "thread", "try"]
-oz_simple_keywords = ["andthen", "at", "attr", "break", "catch", "declare", "define", "else", "elseif",
+oz_simple_keywords = ["andthen", "attr", "at", "break", "catch", "declare", "define", "else", "elseif",
                       "finally", "from", "import", "in", "of", "then"]
 #oz_html = [" > ", " < ", "&"]
 
@@ -55,6 +55,7 @@ context_rules = [
 # Some context keywords
 
 comment_keyword = ["comment_line", 'comment_block']
+string_keyword = ["string1", "string2"]
 inline_comment_keyword = ["comment_line"]
 fun_keyword = ["fun", "proc"]
 meth_keyword = ["meth"]
@@ -63,15 +64,17 @@ class_keyword = ["class"]
 
 # Regex
 
-ozdoc_tag_regex = "@([a-z])*"
-fun_regex = "([A-Z][A-Za-z0-9_]*)|(`.*`)|(\$)"
-meth_regex = "(?!meth)([A-Za-z0-9_]*)|(`.*`)"
+atom_regex = "([a-z][A-Za-z0-9_]*)|('.*')"   # "Except no keywords" can be resolved with lookaheads like in meth_regex, but is treated via prorities in the case of the main rules
 variable_regex = "([A-Z][A-Za-z0-9_]*)|(`.*`)"
-
-#meth_regex = "([A-Za-z0-9]*)"
+ozdoc_tag_regex = "@([a-z])*"
+declarations_name_regex = variable_regex + "|(\$)"
+meth_regex = "(?<=\W)(?!" + \
+             "|".join(list(map(lambda x: "(?<=\s)"+x+"(?=\s)", oz_block_keywords+oz_simple_keywords))) + \
+             ")([a-z][A-Za-z0-9_]*)|('.*')|(!?[A-Z][A-Za-z0-9_]*)|(!?`.*`)"
 
 # Exception
 variable_exception = ["/*", "%", "\'", "\""]
 
-if __name__=="__main__":
-    print("Error: This script is part of the OzDoc framework and should not be ran alone. Please locate and run OzDoc.py")
+if __name__ == "__main__":
+    print("Error: This script is part of the OzDoc framework and should not be ran alone. "
+          "Please locate and run OzDoc.py")

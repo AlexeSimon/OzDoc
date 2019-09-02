@@ -83,12 +83,40 @@ ul.blockList h3 {
     padding: 0; margin: 15px 0;
 }
 
+ul.blockList li.blockList {
+    list-style:none;
+    margin-bottom:25px;
+}
+
 ul.blockList ul.blockList {
     list-style: none; padding: 0; background-color: #ffffff;
 }
 
+/*ul.blockList li.blockList, ul.blockListLast li.blockList {*/
+li.blockListDetails{
+    list-style:none;
+    margin: 0 0 30px 0;
+    border: 3px solid #dee3e9
+}
+
 ul.blockList ul.blockList h4 {
     background-color: #dee3e9; border: 2px solid #d0d9e0;
+}
+
+span.todoLabel {
+    font-weight: bold; color: #FF0000;/*#E10000;*/
+}
+
+dd.todoLabel {
+    font-weight: bold; color: #FF0000;
+}
+
+/*div.general-info li {*/
+    /*list-style:none;*/
+/*}*/
+
+div.TODO {
+    color: #E10000;
 }
 
 /*

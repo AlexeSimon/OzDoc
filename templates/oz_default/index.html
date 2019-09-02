@@ -30,23 +30,22 @@
             <div class="col-lg-3 w-25">
                 <div class="div border border-dark p-4">
                     <div class="list-group">
-                        <!--<a href="#list-info" data-toggle="list" role="tab" aria-controls="info" class="list-group-item list-group-item-action active">Information</a>-->
-                        <a href="#list-ast" data-toggle="list" role="tab" aria-controls="ast" class="list-group-item list-group-item-action active">Abstract Syntax Tree</a>
+                        <a href="#list-info" data-toggle="list" role="tab" aria-controls="info" class="list-group-item list-group-item-action active">Information</a>
+                        <a href="#list-ast" data-toggle="list" role="tab" aria-controls="ast" class="list-group-item list-group-item-action">Abstract Syntax Tree</a>
                         <a href="#list-code" data-toggle="list" role="tab" aria-controls="code" class="list-group-item list-group-item-action">Source Code</a>
                     </div>
                 </div>
             </div>
             <div class="col-lg-9 w-75">
                 <div class="div border border-dark p-4">
-                    <!-- Il faut garder le code là sinon il ajoute des espaces -->
+                    <!-- Need to keep the code here so as not to add needless spaces -->
                     <div class="tab-content" id="nav-tabContent">
-                        <!--<div class="tab-pane fade show active" id="list-info" role="tabpanel" aria-labelledby="list-info-list">-->
-                            <!--@general_info-->
-                        <!--</div>-->
+                        <div class="tab-pane fade show active" id="list-info" role="tabpanel" aria-labelledby="list-info-list">
+                            @general_info
+                        </div>
 
-                        <div class="tab-pane fade show active" id="list-ast" role="tabpanel" aria-labelledby="list-ast-list">
+                        <div class="tab-pane fade" id="list-ast" role="tabpanel" aria-labelledby="list-ast-list">
                             @abstract_syntax_tree
-                            @abstract_syntax_tree_script
                         </div>
 
                         <div class="tab-pane fade" id="list-code" role="tabpanel" aria-labelledby="list-code-list">
@@ -78,9 +77,11 @@
 </section>
 
 <section id="function_details">
+    @methoddetails
     @functiondetails
 </section>
 
+<script src="assets/js/showcode_script.js"></script>
 <script src="assets/js/prism-oz.js"></script>
 <script src="assets/js/jquery.min.js"></script>
 <script src="assets/js/bootstrap.bundle.min.js"></script>
