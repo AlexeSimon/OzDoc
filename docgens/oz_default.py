@@ -146,7 +146,7 @@ def generate_code_doc(base_node, destination):
             line('h3', 'From:')
             with tag('ul'):
                 with tag('li'):
-                    text(make_context_hierarchy(base_node.parent, fun_repo, class_repo, meth_repo))
+                    text(make_context_hierarchy(base_node.parent, fun_repo, class_repo, meth_repo, go_all_the_way=True))
             doc.stag('br')
 
         # Section for unusual keywords found
@@ -311,12 +311,11 @@ def generate_code_doc(base_node, destination):
         doc, tag, text, line = Doc().ttl()
         with tag('ul', klass='blockList'):
             with tag('li', klass='blockList'):
-                with tag('ul', klass='blockList'):
-                    klass = class_repo[0]  # @TODO
+                for klass in class_repo:
                     line('h3', klass[1], id=klass[1] + str(klass[0].node_id))
-                    for method in meth_repo:
-                        methname = method[1]
-                        if methname != '$':
+                    with tag('ul', klass='blockList'):
+                        for method in meth_repo:
+                            methname = method[1]
                             with tag('li', klass='blockListDetails'):
                                 line('h4', methname, id=method[1] + str(method[0].node_id))
                                 with tag('pre', style='font-style: italic;'):
@@ -550,7 +549,7 @@ def make_tagged_section(section_tag, section_name, section_label, taglist, end_o
                 text(code[start:end][(len(section_tag)):].rstrip(' ').rstrip('/*%'))
 
 
-def make_context_hierarchy(node, fun_repo, class_repo, meth_repo, get_root=True):
+def make_context_hierarchy(node, fun_repo, class_repo, meth_repo, get_root=True, go_all_the_way=False):
     context_hierarchy = ""
     link = ""
 
@@ -591,8 +590,10 @@ def make_context_hierarchy(node, fun_repo, class_repo, meth_repo, get_root=True)
                     context_hierarchy = name + link + context_hierarchy
                 else:
                     context_hierarchy = node.context_type + link + context_hierarchy
-                got_root = True
-            break
+                if not go_all_the_way:
+                    got_root = True  # Stop here and don't take the last node into account IF not going all the way
+            if not go_all_the_way:
+                break
 
         else:
             context_hierarchy = node.context_type + link + context_hierarchy
