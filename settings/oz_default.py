@@ -42,11 +42,11 @@ priority_context_rules = [
 context_rules = [
                 ["{", "symbol", "{", "symbol", "}"],
                 ["[]", "symbol", "[]", "empty", ""],
-                ["var", "varregex", re.compile(r"[A-Z][A-Za-z0-9]*"), "empty", ""]
+                ["var", "varregex", re.compile(r"[A-Z][A-Za-z0-9_]*"), "empty", ""]
                 ] \
                 + oz_generate_context_rules(oz_block_keywords, oz_block_keyword)\
                 + oz_generate_context_rules(oz_simple_keywords, oz_simple_keyword)\
-                + [["atom", "regex", re.compile(r"[a-z][A-Za-z0-9]*"), "empty", ""]]
+                + [["atom", "regex", re.compile(r"[a-z][A-Za-z0-9_]*"), "empty", ""]]
                 #+ oz_generate_context_rules(oz_html, oz_simple_keyword)\
 
                 #["atom", "text", "atom", "regex", "[a-z]*\(", "\)"],
@@ -64,9 +64,9 @@ class_keyword = ["class"]
 # Regex
 
 ozdoc_tag_regex = "@([a-z])*"
-fun_regex = "([A-Z][A-Za-z0-9]*)|(`.*`)|(\$)"
-meth_regex = "(?!meth)([A-Za-z0-9]*)|(`.*`)"
-variable_regex = "([A-Z][A-Za-z0-9]*)|(`.*`)"
+fun_regex = "([A-Z][A-Za-z0-9_]*)|(`.*`)|(\$)"
+meth_regex = "(?!meth)([A-Za-z0-9_]*)|(`.*`)"
+variable_regex = "([A-Z][A-Za-z0-9_]*)|(`.*`)"
 
 #meth_regex = "([A-Za-z0-9]*)"
 

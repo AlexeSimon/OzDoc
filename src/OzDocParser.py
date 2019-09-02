@@ -237,9 +237,7 @@ class OzDocParser:
                 next_dir = main_dir.open_new_context(self.next_node_id(), "dir", description=os.path.join(dirName, subdir))
                 self.build_abstract_syntax_tree_dir(next_dir)
 
-
     def build_abstract_syntax_tree(self, main_node):
-
         if main_node.code is None and main_node.context_type == "file" and main_node.description is not None:
             main_node.code = FileHandler.file_to_string(main_node.description)
 
