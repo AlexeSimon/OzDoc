@@ -21,10 +21,11 @@ from yattag import Doc, indent
 from pathlib import Path
 from src import FileHandler as fh
 
-supported_tags = ['@param', '@throws', '@return', '@see', '@since', '@version', '@pre', '@post', '@author', '@todo']
-supported_names = ['Parameters', 'Throws', 'Returns', 'See Also', 'Since', 'Version', 'Pre-Conditions', 'Post-Conditions', 'Author', 'Todo']
-supported_labels = ['paramLabel', 'throwLabel', 'returnLabel', 'seeLabel', 'sinceLabel', 'versionLabel', 'preLabel', 'postLabel', 'authorLabel', 'todoLabel']
+supported_tags = ['@summary', '@param', '@throws', '@return', '@see', '@since', '@version', '@pre', '@post', '@author', '@todo']
+supported_names = ['Summary', 'Parameters', 'Throws', 'Returns', 'See Also', 'Since', 'Version', 'Pre-Conditions', 'Post-Conditions', 'Author', 'Todo']
+supported_labels = ['summaryLabel', 'paramLabel', 'throwLabel', 'returnLabel', 'seeLabel', 'sinceLabel', 'versionLabel', 'preLabel', 'postLabel', 'authorLabel', 'todoLabel']
 TODO_TAG = '@todo'
+SUMMARY_TAG = '@summary'
 
 OZ_FILE_CLASS = 'oz_file'
 OZ_KEYWORD_CLASS = 'oz_keyword'
@@ -139,6 +140,23 @@ def generate_code_doc(base_node, destination):
         doc.stag('br')
 
         nothing = True
+
+        # Section for file summary
+        if base_node.children:
+            if base_node.children[0].context_type in settings.comment_keyword:
+                taglist = comment_repo[0][1]
+                if tag_found_in_comment(SUMMARY_TAG, taglist):
+                    nothing = False
+                    for i, tag_found in enumerate(taglist):
+                        if tag_found[0] == SUMMARY_TAG:
+                            # Content
+                            start = tag_found[1]
+                            end = taglist[i + 1][1] - 1 if i < (len(taglist) - 1) else comment_repo[0][0].end
+                            content = code[start:end][(len(SUMMARY_TAG)):].rstrip(' ').rstrip('/*%')
+                            line('font', content, size='+1')
+                            doc.stag('br')
+                            doc.stag('br')
+                            break
 
         # Section for context hierarchy, if not root node
         if base_node.parent:
@@ -455,8 +473,27 @@ def make_table_section(type, main_repo, sub_repo, code, destination, fun_repo, c
                         prev_sister = elem[0].find_previous_sister()
                         if prev_sister:
                             if prev_sister.context_type in settings.comment_keyword:  # if previous sister is a comment
+                                # Default value for the description
                                 description = code[prev_sister.start:prev_sister.end].split('\n')[0][:200]
                                 description = description.lstrip('/*% ').rstrip('/*% ')
+
+                                # If a summary tag is in use
+                                # @TODO : transform this next bit into a function
+                                # Find it in comment_repo as well.
+                                for i, x in enumerate(comment_repo):
+                                    if x[0].start == prev_sister.start:
+                                        k = i
+                                        taglist = comment_repo[k][1]
+                                        if tag_found_in_comment(SUMMARY_TAG, taglist):
+                                            for j, tag_found in enumerate(taglist):
+                                                if tag_found[0] == SUMMARY_TAG:
+                                                    start = tag_found[1]
+                                                    end = taglist[j + 1][1] - 1 if j < (len(taglist) - 1) else \
+                                                    comment_repo[k][0].end
+                                                    description = code[start:end][(len(SUMMARY_TAG)):].rstrip(
+                                                        ' ').rstrip('/*%')
+                                                    break
+                                            break
                         text(description)
 
                         if type == 'class':
@@ -552,12 +589,21 @@ def make_details_section(type, repo, code, destination, fun_repo, class_repo, me
                         for i, x in enumerate(comment_repo):
                             if x[0].start == prev_sister.start:
                                 k = i
-                                for tag_found in comment_repo[k][1]:
-                                    if tag_found[0] in supported_tags:
-                                        end = tag_found[1]
-                                        break
+                                taglist = comment_repo[k][1]
+                                has_summary = tag_found_in_comment(SUMMARY_TAG, taglist)
+                                for j, tag_found in enumerate(taglist):
+                                    if not has_summary:
+                                        if tag_found[0] in supported_tags:
+                                            end = tag_found[1]
+                                            description = code[start:end]  # Default value of the description, if no @summary
+                                            break
+                                    else:
+                                        if tag_found[0] == SUMMARY_TAG:
+                                            start = tag_found[1]
+                                            end = taglist[j + 1][1] - 1 if j < (len(taglist) - 1) else comment_repo[k][0].end
+                                            description = code[start:end][(len(SUMMARY_TAG)):].rstrip(' ').rstrip('/*%')
+                                            break
                                 break
-                        description = code[start:end]
 
                 with tag('pre'):
                     description = description.split('\n')
@@ -571,6 +617,8 @@ def make_details_section(type, repo, code, destination, fun_repo, class_repo, me
                             end_of_comment = comment_repo[k][0].end
 
                             for i in range(len(supported_tags)):
+                                if supported_tags[i] == SUMMARY_TAG:
+                                    continue
                                 found = tag_found_in_comment(supported_tags[i], taglist)
                                 if found:
                                     make_tagged_section(supported_tags[i], supported_names[i],
