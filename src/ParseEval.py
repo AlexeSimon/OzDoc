@@ -25,7 +25,11 @@ def eval_rule_empty(node, offset, rule_string):
 
 def eval_rule_symbol(node, offset, rule_string):
     if node.code[offset:offset + len(rule_string)] == rule_string:
-        return rule_string
+        if len(rule_string) == 1:
+            if node.code[offset-1] != '\\':
+                return rule_string
+        else:
+            return rule_string
 
 
 def eval_rule_text(node, offset, rule_string):

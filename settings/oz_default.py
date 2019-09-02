@@ -36,8 +36,8 @@ priority_context_rules = [
                 ["comment_line", "symbol", '%', "symbol", '\n'],
                 ["comment_block", "symbol", "/*", "symbol", "*/"],
                 ["string1", "symbol", "\'", "symbol", "\'"],
-                ["string2", "symbol", '\"', "symbol", '\"']]#,
-                #["var2", "symbol", "`", "symbol", "`"]]
+                ["string2", "symbol", '\"', "symbol", '\"'],
+                ["var2", "symbol", "`", "symbol", "`"]]
 
 context_rules = [
                 ["{", "symbol", "{", "symbol", "}"],
