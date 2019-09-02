@@ -36,7 +36,7 @@ SHOW_BUTTON_CLASS = 'showCodeButton'
 REGEX_PATH_SPLIT = re.compile("/|\\\\")
 ROOT_CONTEXTS = ["dir", "file", "text"]
 USUAL_KEYWORDS = ["case", "class", "for", "fun", "if", "local", "meth", "proc", "try",
-                  "andthen", "at", "break", "catch", "declare", "else", "elseif", "finally", "of", "in", "then"]
+                  "andthen", "attr", "at", "break", "catch", "declare", "else", "elseif", "finally", "of", "in", "then"]
 
 gen_directory = ""
 settings = ""
@@ -239,292 +239,8 @@ def generate_code_doc(base_node, destination):
     source_code = doc.getvalue()
     fh.replace_in_file('@source_code', source_code, destination)
 
-    ###################################################################################################################
-    #                        Generating the head of the table containing all of the classes                           #
-    ###################################################################################################################
-    new_classtablehead = ""
-    if class_repo:
-        doc, tag, text = Doc().tagtext()
-        with tag('thead'):
-            with tag('tr'):
-                with tag('th'):
-                    text('Class')
-                with tag('th'):
-                    text('Description')
-        new_classtablehead = indent(doc.getvalue())
-    fh.replace_in_file('@classtablehead', new_classtablehead, destination)
-
-    ###################################################################################################################
-    #                        Generating the body of the table containing all of the classes                           #
-    ###################################################################################################################
-    if class_repo:
-        doc, tag, text, line = Doc().ttl()
-        with tag('tbody'):
-            for klass in class_repo:
-                klassname = klass[1]
-                with tag('tr'):
-                    with tag('td'):
-                        with tag('a', href="#" + klass[1] + str(klass[0].node_id)):
-                            text(klassname)
-                    with tag('td'):
-                        description = ""
-                        prev_sister = klass[0].find_previous_sister()
-                        if prev_sister:
-                            if prev_sister.context_type in settings.comment_keyword:  # if previous sister is a comment
-                                description = code[prev_sister.start:prev_sister.end].split('\n')[0][:200]
-                                description = description.lstrip('/*% ').rstrip('/*% ')
-                        text(description)
-
-                        # Getting methods of the class
-                        methlist = []
-                        for meth in meth_repo:
-                            if meth[0].start > klass[0].start and meth[0].end < klass[0].end:
-                                methlist.append(meth)
-                        if methlist:
-                            doc.stag('br')
-                            line('u', 'Contains methods')
-                            text(' : ')
-                            for i, meth in enumerate(methlist):
-                                if i > 0:
-                                    doc.asis('&nbsp;')
-                                    text(',')
-                                    doc.asis('&nbsp;')
-                                with tag('a', href="#" + meth[1] + str(meth[0].node_id)):
-                                    text(meth[1])
-                            text('.')
-
-                        # Making context hierarchy
-                        context_hierarchy = make_context_hierarchy(klass[0].parent if klass[0].parent else klass[0],
-                                                                   fun_repo, class_repo, meth_repo)
-                        if context_hierarchy:
-                            doc.stag('br')
-                            with tag('i'):
-                                text('(from: ' + context_hierarchy + ')')
-        new_classtablebody = indent(doc.getvalue())
-        fh.replace_in_file('@classtablebody', new_classtablebody, destination)
-
-    ###################################################################################################################
-    #                     Generating the section containing the details of all of the methods                         #
-    ###################################################################################################################
-    new_methoddetails = ""
-    if meth_repo:
-        doc, tag, text, line = Doc().ttl()
-        with tag('ul', klass='blockList'):
-            with tag('li', klass='blockList'):
-                for klass in class_repo:
-                    line('h3', klass[1], id=klass[1] + str(klass[0].node_id))
-                    with tag('ul', klass='blockList'):
-                        for method in meth_repo:
-                            methname = method[1]
-                            with tag('li', klass='blockListDetails'):
-                                line('h4', methname, id=method[1] + str(method[0].node_id))
-                                with tag('pre', style='font-style: italic;'):
-                                    text(method[0].context_type + ' ' + method[1]) # normally function signature
-
-                                    # @TODO
-                                    # Check if the @throws tag is used.
-                                    # (get sister, make taglist)
-                                    # throws_found = tag_found_in_comment('@throws', taglist)
-                                    # # If exception thrown, add :
-                                    # text('\n\t\t\tthrows ')
-                                    # line('a', 'Insert Exception Name', href='')
-
-                                description = ""
-                                prev_sister = method[0].find_previous_sister()
-                                k = -1  # index of previous sister (if it is a comment) in comment_repo
-
-                                if prev_sister:
-                                    if prev_sister.context_type in settings.comment_keyword:
-                                        # Entered if previous sister is a comment
-                                        start = prev_sister.start
-                                        end = prev_sister.end
-
-                                        # Find it in comment_repo as well.
-                                        for i, x in enumerate(comment_repo):
-                                            if x[0].start == prev_sister.start:
-                                                k = i
-                                                for tag_found in comment_repo[k][1]:
-                                                    if tag_found[0] in supported_tags:
-                                                        end = tag_found[1]
-                                                        break
-                                                break
-                                        description = code[start:end]
-
-                                with tag('pre'):
-                                    description = description.split('\n')
-                                    for d in description:
-                                        line('code', d.lstrip('/*% '), klass='block')
-
-                                if k != -1:
-                                    if comment_repo[k][1]:
-                                        with tag('dl'):
-                                            taglist = comment_repo[k][1]
-                                            end_of_comment = comment_repo[k][0].end
-
-                                            for i in range(len(supported_tags)):
-                                                found = tag_found_in_comment(supported_tags[i], taglist)
-                                                if found:
-                                                    make_tagged_section(supported_tags[i], supported_names[i],
-                                                                        supported_labels[i], taglist, end_of_comment,
-                                                                        tag, text, line, code)
-
-                                with tag('dd'):
-                                    fun_id = method[1] + str(method[0].node_id) + 'code'
-                                    line('button', 'Source Code', onclick='show' + fun_id + '()', klass=SHOW_BUTTON_CLASS)
-                                    with tag('pre', ('data-start', str(method[0].line_start)),
-                                             id=fun_id, style='display: none;', klass="line-numbers"):
-                                        # line('code', (code[function[0].start:function[0].end]))
-                                        with tag('code', klass='language-oz'):
-                                            text(code[method[0].start:method[0].end])
-
-                                    show_fun_def = 'function %s() {' \
-                                                   '  var x = document.getElementById("%s");' \
-                                                   '  if (x.style.display === "none") {' \
-                                                   '    x.style.display = "block";' \
-                                                   '  } else {' \
-                                                   '    x.style.display = "none";' \
-                                                   '   }' \
-                                                   '}' % ('show' + fun_id, fun_id)
-                                    line('script', show_fun_def)
-
-        new_methoddetails = indent(doc.getvalue())
-    fh.replace_in_file('@methoddetails', new_methoddetails, destination)
-
-    ###################################################################################################################
-    #                        Generating the head of the table containing all of the functions                         #
-    ###################################################################################################################
-    new_functablehead = ""
-    if fun_repo and any(map(lambda e: e[2] != '$', fun_repo)):
-        doc, tag, text = Doc().tagtext()
-        with tag('thead'):
-            with tag('tr'):
-                with tag('th'):
-                    text('Function')
-                with tag('th'):
-                    text('Type')
-                with tag('th'):
-                    text('Description')
-        new_functablehead = indent(doc.getvalue())
-    fh.replace_in_file('@functablehead', new_functablehead, destination)
-
-    ###################################################################################################################
-    #                        Generating the body of the table containing all of the functions                         #
-    ###################################################################################################################
-    new_functablebody = ""
-    if fun_repo:
-        doc, tag, text = Doc().tagtext()
-        with tag('tbody'):
-            for function in fun_repo:
-                funcname = function[2]
-                if funcname != '$':
-                    with tag('tr'):
-                        with tag('td'):
-                            with tag('a', href="#" + function[2] + str(function[0].node_id)):
-                                text(funcname)
-                        with tag('td'):
-                            text(function[0].context_type)
-                        with tag('td'):
-                            description = ""
-                            prev_sister = function[0].find_previous_sister()
-                            if prev_sister:
-                                if prev_sister.context_type in settings.comment_keyword:  # if previous sister is a comment
-                                    description = code[prev_sister.start:prev_sister.end].split('\n')[0][:200]
-                                    description = description.lstrip('/*% ').rstrip('/*% ')
-                            text(description)
-
-                            context_hierarchy = make_context_hierarchy(function[0].parent if function[0].parent else function[0],
-                                                                       fun_repo, class_repo, meth_repo)
-                            if context_hierarchy:
-                                doc.stag('br')
-                                with tag('i'):
-                                    text('(from: ' + context_hierarchy + ')')
-        new_functablebody = indent(doc.getvalue())
-    fh.replace_in_file('@functablebody', new_functablebody, destination)
-
-    ###################################################################################################################
-    #                     Generating the section containing the details of all of the functions                       #
-    ###################################################################################################################
-    new_functiondetails = ""
-    if fun_repo and any(map(lambda e: e[2] != '$', fun_repo)):
-        doc, tag, text, line = Doc().ttl()
-        with tag('ul', klass='blockList'):
-            with tag('li', klass='blockList'):
-                line('h3', 'Function details')
-                with tag('ul', klass='blockList'):
-                    for function in fun_repo:
-                        funcname = function[2]
-                        if funcname != '$':
-                            with tag('li', klass='blockList'):
-                                line('h4', funcname, id=function[2] + str(function[0].node_id))
-                                with tag('pre', style='font-style: italic;'):
-                                    text(function[0].context_type + ' ' + code[function[1].start:function[1].end])
-
-                                    # @TODO
-                                    # Check if the @throws tag is used.
-                                    # (get sister, make taglist)
-                                    # throws_found = tag_found_in_comment('@throws', taglist)
-                                    # # If exception thrown, add :
-                                    # text('\n\t\t\tthrows ')
-                                    # line('a', 'Insert Exception Name', href='')
-
-                                description = ""
-                                prev_sister = function[0].find_previous_sister()
-                                k = -1  # index of previous sister (if it is a comment) in comment_repo
-
-                                if prev_sister:
-                                    if prev_sister.context_type in settings.comment_keyword:
-                                        # Entered if previous sister is a comment
-                                        start = prev_sister.start
-                                        end = prev_sister.end
-
-                                        # Find it in comment_repo as well.
-                                        for i, x in enumerate(comment_repo):
-                                            if x[0].start == prev_sister.start:
-                                                k = i
-                                                for tag_found in comment_repo[k][1]:
-                                                    if tag_found[0] in supported_tags:
-                                                        end = tag_found[1]
-                                                        break
-                                                break
-                                        description = code[start:end]
-
-                                with tag('pre'):
-                                    description = description.split('\n')
-                                    for d in description:
-                                        line('code', d.lstrip('/*% '), klass='block')
-
-                                if k != -1:
-                                    if comment_repo[k][1]:
-                                        with tag('dl'):
-                                            taglist = comment_repo[k][1]
-                                            end_of_comment = comment_repo[k][0].end
-
-                                            for i in range(len(supported_tags)):
-                                                found = tag_found_in_comment(supported_tags[i], taglist)
-                                                if found:
-                                                    make_tagged_section(supported_tags[i], supported_names[i],
-                                                                        supported_labels[i], taglist, end_of_comment,
-                                                                        tag, text, line, code)
-
-                                with tag('dd'):  # or 'dt' for no space
-                                    fun_id = function[2] + str(function[0].node_id) + 'code'
-                                    line('button', 'Source Code', klass=SHOW_BUTTON_CLASS, onclick='show' + fun_id + '()')
-                                    with tag('pre', ('data-start', str(function[0].line_start)),
-                                             id=fun_id, style='display: none;', klass="line-numbers"):
-                                        with tag('code', klass='language-oz'):
-                                            text(code[function[0].start:function[0].end])
-
-                                    show_fun_def = 'function %s() {' \
-                                                   '  var x = document.getElementById("%s");' \
-                                                   '  if (x.style.display === "none") {' \
-                                                   '    x.style.display = "block";' \
-                                                   '  } else {' \
-                                                   '    x.style.display = "none";' \
-                                                   '   }' \
-                                                   '}' % ('show' + fun_id, fun_id)
-                                    line('script', show_fun_def)
-        new_functiondetails = indent(doc.getvalue())
-    fh.replace_in_file('@functiondetails', new_functiondetails, destination)
+    make_table_section('class', class_repo, meth_repo, code, destination, fun_repo, class_repo, meth_repo, comment_repo)
+    make_table_section('function', fun_repo, None, code, destination, fun_repo, class_repo, meth_repo, comment_repo)
 
 
 def tag_found_in_comment(tag_searched, taglist):
@@ -690,6 +406,195 @@ def color_string(source_string, string_to_replace, color_class):
 
 def wrap_color_class(string, color_class):
     return "<span class=\"" + color_class + "\">" + string+"</span>"
+
+
+def make_table_section(type, main_repo, sub_repo, code, destination, fun_repo, class_repo, meth_repo, comment_repo):
+    if type != 'function' and type != 'class':
+        return
+    iname = 1 if type == 'class' else 2  # Index of the repository column containing the name of the class/function
+
+    repo_is_useful = bool(main_repo)
+    if type == 'function':
+        repo_is_useful = bool(main_repo) and any(map(lambda e: e[iname] != '$', main_repo))
+
+    if repo_is_useful:
+
+        ################################################################################################################
+        #                                       Generating the head of the table                                       #
+        ################################################################################################################
+        doc, tag, text = Doc().tagtext()
+        with tag('thead'):
+            with tag('tr'):
+                with tag('th'):
+                    text(type.capitalize())
+                if type == 'function':
+                    with tag('th'):
+                        text('Type')
+                with tag('th'):
+                    text('Description')
+        fh.replace_in_file('@' + type + 'tablehead', indent(doc.getvalue()), destination)
+
+        ################################################################################################################
+        #                                       Generating the body of the table                                       #
+        ################################################################################################################
+        doc, tag, text, line = Doc().ttl()
+        with tag('tbody'):
+            for elem in main_repo:
+                elemname = elem[iname]
+                if type == 'function' and elemname == '$':
+                    continue
+                with tag('tr'):
+                    with tag('td'):
+                        with tag('a', href="#" + elemname + str(elem[0].node_id)):
+                            text(elemname)
+                    if type == 'function':
+                        with tag('td'):
+                            text(elem[0].context_type)
+                    with tag('td'):
+                        description = ""
+                        prev_sister = elem[0].find_previous_sister()
+                        if prev_sister:
+                            if prev_sister.context_type in settings.comment_keyword:  # if previous sister is a comment
+                                description = code[prev_sister.start:prev_sister.end].split('\n')[0][:200]
+                                description = description.lstrip('/*% ').rstrip('/*% ')
+                        text(description)
+
+                        if type == 'class':
+                            # Getting methods of the class
+                            methlist = []
+                            for meth in sub_repo:
+                                if meth[0].start > elem[0].start and meth[0].end < elem[0].end:
+                                    methlist.append(meth)
+                            if methlist:
+                                doc.stag('br')
+                                line('u', 'Contains methods')
+                                text(' : ')
+                                for i, meth in enumerate(methlist):
+                                    if i > 0:
+                                        doc.asis('&nbsp;')
+                                        text(',')
+                                        doc.asis('&nbsp;')
+                                    with tag('a', href="#" + meth[1] + str(meth[0].node_id)):
+                                        text(meth[1])
+                                text('.')
+
+                        # Making context hierarchy
+                        context_hierarchy = make_context_hierarchy(elem[0].parent if elem[0].parent else elem[0],
+                                                                   fun_repo, class_repo, meth_repo)
+                        if context_hierarchy:
+                            doc.stag('br')
+                            with tag('i'):
+                                text('(from: ' + context_hierarchy + ')')
+        fh.replace_in_file('@' + type + 'tablebody', indent(doc.getvalue()), destination)
+
+        ################################################################################################################
+        #                 Generating the section containing details about the functions or methods                    #
+        ################################################################################################################
+        if type == 'class' and not bool(sub_repo):
+            empty = ""
+            fh.replace_in_file('@' + type + 'details', empty, destination)
+        else:
+            doc, tag, text, line = Doc().ttl()
+            with tag('ul', klass='blockList'):
+                with tag('li', klass='blockList'):
+                    if type == 'function':
+                        line('h3', 'Function details')
+                        make_details_section(type, main_repo, code, destination, fun_repo, class_repo, meth_repo, comment_repo, doc, tag, text, line)
+                    else:  # meaning type == 'class'
+                        for klass in main_repo:
+                            line('h3', klass[1], id=klass[1] + str(klass[0].node_id))
+                            make_details_section(type, sub_repo, code, destination, fun_repo, class_repo, meth_repo, comment_repo, doc, tag, text, line, klass=klass)
+            fh.replace_in_file('@' + type + 'details', indent(doc.getvalue()), destination)
+
+    else:
+        empty = ""
+        fh.replace_in_file('@' + type + 'tablehead', empty, destination)
+        fh.replace_in_file('@' + type + 'tablebody', empty, destination)
+        fh.replace_in_file('@' + type + 'details', empty, destination)
+
+
+def make_details_section(type, repo, code, destination, fun_repo, class_repo, meth_repo, comment_repo, doc, tag, text, line, klass=None):
+    iname = 1 if type == 'class' else 2  # Index of the repository column containing the name of the class/function
+    with tag('ul', klass='blockList'):
+        for elem in repo:
+            elemname = elem[iname]
+            if type == 'function' and elemname == '$':
+                continue
+            elif type == 'class' and ((elem[0].start < klass[0].start) or (elem[0].end > klass[0].end)):
+                continue
+            with tag('li', klass='blockListDetails'):
+                line('h4', elemname, id=elemname + str(elem[0].node_id))
+                with tag('pre', style='font-style: italic;'):
+                    if type == 'function':
+                        text(elem[0].context_type + ' ' + code[elem[1].start:elem[1].end])
+                    else:  # type == 'class'
+                        text(elem[0].context_type + ' ' + elemname)
+
+                    # @TODO
+                    # Check if the @throws tag is used.
+                    # (get sister, make taglist)
+                    # throws_found = tag_found_in_comment('@throws', taglist)
+                    # # If exception thrown, add :
+                    # text('\n\t\t\tthrows ')
+                    # line('a', 'Insert Exception Name', href='')
+
+                description = ""
+                prev_sister = elem[0].find_previous_sister()
+                k = -1  # index of previous sister (if it is a comment) in comment_repo
+
+                if prev_sister:
+                    if prev_sister.context_type in settings.comment_keyword:
+                        # Entered if previous sister is a comment
+                        start = prev_sister.start
+                        end = prev_sister.end
+
+                        # Find it in comment_repo as well.
+                        for i, x in enumerate(comment_repo):
+                            if x[0].start == prev_sister.start:
+                                k = i
+                                for tag_found in comment_repo[k][1]:
+                                    if tag_found[0] in supported_tags:
+                                        end = tag_found[1]
+                                        break
+                                break
+                        description = code[start:end]
+
+                with tag('pre'):
+                    description = description.split('\n')
+                    for d in description:
+                        line('code', d.lstrip('/*% '), klass='block')
+
+                if k != -1:
+                    if comment_repo[k][1]:
+                        with tag('dl'):
+                            taglist = comment_repo[k][1]
+                            end_of_comment = comment_repo[k][0].end
+
+                            for i in range(len(supported_tags)):
+                                found = tag_found_in_comment(supported_tags[i], taglist)
+                                if found:
+                                    make_tagged_section(supported_tags[i], supported_names[i],
+                                                        supported_labels[i], taglist, end_of_comment,
+                                                        tag, text, line, code)
+
+                with tag('dd'): # or 'dt' for no space
+                    elem_id = elemname + str(elem[0].node_id) + 'code'
+                    line('button', 'Source Code', onclick='show' + elem_id + '()', klass=SHOW_BUTTON_CLASS)
+                    with tag('pre', ('data-start', str(elem[0].line_start)),
+                             id=elem_id, style='display: none;', klass="line-numbers"):
+                        # line('code', (code[function[0].start:function[0].end]))
+                        with tag('code', klass='language-oz'):
+                            text(code[elem[0].start:elem[0].end])
+
+                    show_fun_def = 'function %s() {' \
+                                   '  var x = document.getElementById("%s");' \
+                                   '  if (x.style.display === "none") {' \
+                                   '    x.style.display = "block";' \
+                                   '  } else {' \
+                                   '    x.style.display = "none";' \
+                                   '   }' \
+                                   '}' % ('show' + elem_id, elem_id)
+                    line('script', show_fun_def)
 
 
 if __name__=="__main__":
