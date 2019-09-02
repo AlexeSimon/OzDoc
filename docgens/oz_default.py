@@ -535,11 +535,11 @@ def make_table_section(type, main_repo, sub_repo, code, destination, fun_repo, c
             with tag('ul', klass='blockList'):
                 with tag('li', klass='blockList'):
                     if type == 'function':
-                        line('h3', 'Function details')
+                        line('h2', 'Function details')
                         make_details_section(type, main_repo, code, destination, fun_repo, class_repo, meth_repo, comment_repo, doc, tag, text, line)
                     else:  # meaning type == 'class'
                         for klass in main_repo:
-                            line('h3', klass[1], id=klass[1] + str(klass[0].node_id))
+                            line('h2', klass[1], id=klass[1] + str(klass[0].node_id))
                             make_details_section(type, sub_repo, code, destination, fun_repo, class_repo, meth_repo, comment_repo, doc, tag, text, line, klass=klass)
             fh.replace_in_file('@' + type + 'details', indent(doc.getvalue()), destination)
 

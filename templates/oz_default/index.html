@@ -28,7 +28,7 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-3 w-25">
-                <div class="div border border-dark p-4">
+                <div class="div border border-dark p-4 rounded">
                     <div class="list-group">
                         <a href="#list-info" data-toggle="list" role="tab" aria-controls="info" class="list-group-item list-group-item-action active">Information</a>
                         <a href="#list-ast" data-toggle="list" role="tab" aria-controls="ast" class="list-group-item list-group-item-action">Abstract Syntax Tree</a>
@@ -37,7 +37,7 @@
                 </div>
             </div>
             <div class="col-lg-9 w-75">
-                <div class="div border border-dark p-4">
+                <div class="div border border-dark p-4 rounded">
                     <!-- Need to keep the code here so as not to add needless spaces -->
                     <div class="tab-content" id="nav-tabContent">
                         <div class="tab-pane fade show active" id="list-info" role="tabpanel" aria-labelledby="list-info-list">
@@ -70,14 +70,14 @@
             @classtablebody
         </table>
         <table class="table table-striped">
-            @functablehead
-            @functablebody
+            @functiontablehead
+            @functiontablebody
         </table>
     </div>
 </section>
 
 <section id="function_details">
-    @methoddetails
+    @classdetails
     @functiondetails
 </section>
 
