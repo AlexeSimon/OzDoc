@@ -40,6 +40,7 @@ priority_context_rules = [
                 ["var2", "symbol", "`", "symbol", "`"]]
 
 context_rules = [
+                ["&", "regex", re.compile("&."), "empty", ""],
                 ["{", "symbol", "{", "symbol", "}"],
                 ["[]", "symbol", "[]", "empty", ""],
                 ["var", "varregex", re.compile(r"[A-Z][A-Za-z0-9_]*"), "empty", ""]

@@ -37,7 +37,7 @@ SHOW_BUTTON_CLASS = 'showCodeButton'
 REGEX_PATH_SPLIT = re.compile("/|\\\\")
 ROOT_CONTEXTS = ["dir", "file", "text"]
 USUAL_KEYWORDS = ["case", "class", "for", "fun", "if", "local", "meth", "proc", "try",
-                  "andthen", "attr", "at", "break", "catch", "declare", "else", "elseif", "finally", "of", "in", "then"]
+                  "andthen", "attr", "at", "break", "catch", "declare", "else", "elseif", "finally", "of", "in", "then", "&"]
 
 gen_directory = ""
 settings = ""

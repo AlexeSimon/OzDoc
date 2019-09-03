@@ -37,12 +37,17 @@ if __name__ == '__main__':
                              context_rules=settings.context_rules)
 
     elif args.dir is not None:  # directory mode
-        parser = OzDocParser(context_type="dir", description=args.dir,
-                             priority_context_rules=settings.priority_context_rules,
-                             context_rules=settings.context_rules)
+        if args.extension is None:
+            parser = OzDocParser(context_type="dir", description=args.dir,
+                                priority_context_rules=settings.priority_context_rules,
+                                context_rules=settings.context_rules)
+        else:
+            parser = OzDocParser(code=args.extension, context_type="dir", description=args.dir,
+                                 priority_context_rules=settings.priority_context_rules,
+                                 context_rules=settings.context_rules)
 
     else:  # text mode
-        parser = OzDocParser(args.text, context_type="text",
+        parser = OzDocParser(code=args.text, context_type="text",
                              priority_context_rules=settings.priority_context_rules,
                              context_rules=settings.context_rules)
 

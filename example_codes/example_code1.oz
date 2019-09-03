@@ -8,7 +8,7 @@ import
    Application
    Tk
    Error
-   
+
 define
 %declare
    RandomString = 'JcSa0krKRHvcxUupGlWW_'
