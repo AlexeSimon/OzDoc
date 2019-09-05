@@ -105,27 +105,67 @@ def generate_code_doc(base_node, destination):
     OzDocParser.fuse_similar_successive_contexts(base_node, settings.inline_comment_keyword)
 
     ###################################################################################################################
+    #                                     Generating abstract syntax tree                                             #
+    ###################################################################################################################
+    doc, tag, text = Doc().tagtext()
+    with tag('pre', klass='oz-code'):
+        doc.asis(gen_html_ast(base_node, ROOT_CONTEXTS + settings.oz_block_keywords, ["\'", "\"", "`"]))
+    ast = doc.getvalue()
+    fh.replace_in_file('@abstract_syntax_tree', ast, destination)
+
+    ###################################################################################################################
+    #                                          Generating source code                                                 #
+    ###################################################################################################################
+    doc, tag, text = Doc().tagtext()
+    with tag('pre', klass='line-numbers'):
+        with tag('code', klass='language-oz'):
+            text(code)
+    source_code = doc.getvalue()
+    fh.replace_in_file('@source_code', source_code, destination)
+
+    ###################################################################################################################
     #                 Creation of repositories containing functions, classes, comments, etc.                          #
     ###################################################################################################################
-    fun_repo = OzDocParser.build_link_context_with_repo(base_node, settings.fun_keyword, settings.def_keyword)
-    OzDocParser.link_following_regex_to_repo(base_node, fun_repo, settings.declarations_name_regex,
-                                             exception=settings.comment_keyword)
-    # Example of how to print a repository:
-    # PrintTools.print_repo(fun_repo)
+    try:
+        fun_repo = OzDocParser.build_link_context_with_repo(base_node, settings.fun_keyword, settings.def_keyword)
+        OzDocParser.link_following_regex_to_repo(base_node, fun_repo, settings.declarations_name_regex,
+                                                 exception=settings.comment_keyword)
+        # Example of how to print a repository:
+        # PrintTools.print_repo(fun_repo)
 
-    fun_call_repo = OzDocParser.build_context_repo_not_in(base_node, settings.def_keyword,
-                                                      ListTools.get_list_column(fun_repo, 1))
+        fun_call_repo = OzDocParser.build_context_repo_not_in(base_node, settings.def_keyword,
+                                                              ListTools.get_list_column(fun_repo, 1))
 
-    class_repo = OzDocParser.build_context_repo(base_node, settings.class_keyword)
-    OzDocParser.link_following_regex_to_repo(base_node, class_repo, settings.declarations_name_regex,
-                                             exception=settings.comment_keyword)
+        class_repo = OzDocParser.build_context_repo(base_node, settings.class_keyword)
+        OzDocParser.link_following_regex_to_repo(base_node, class_repo, settings.declarations_name_regex,
+                                                 exception=settings.comment_keyword)
 
-    meth_repo = OzDocParser.build_context_repo(base_node, settings.meth_keyword)
-    OzDocParser.link_following_regex_to_repo(base_node, meth_repo, settings.meth_regex,
-                                             exception=settings.comment_keyword)
+        meth_repo = OzDocParser.build_context_repo(base_node, settings.meth_keyword)
+        OzDocParser.link_following_regex_to_repo(base_node, meth_repo, settings.meth_regex,
+                                                 exception=settings.comment_keyword)
 
-    comment_repo = OzDocParser.build_context_repo(base_node, settings.comment_keyword)
-    OzDocParser.link_all_regex_to_repo(base_node, comment_repo, settings.ozdoc_tag_regex)
+        comment_repo = OzDocParser.build_context_repo(base_node, settings.comment_keyword)
+        OzDocParser.link_all_regex_to_repo(base_node, comment_repo, settings.ozdoc_tag_regex)
+    except Exception as exception:
+        doc, tag, text, line = Doc().ttl()
+        with tag('h2', style='color: #FF0000; font-weight: bold;'):
+            text("You did not input a vaild, errorless Oz file.")
+            doc.stag('br')
+            text("This file could thus not be parsed correctly.")
+            doc.stag('br')
+            text("(Hint: look for unclosed parentheses and curly brackets)")
+            doc.stag('br')
+            doc.stag('br')
+            text("The following exception happened during creation of repositories:")
+            doc.stag('br')
+            line('i', exception.__class__.__name__)
+        fh.replace_in_file('@general_info', doc.getvalue(), destination)
+
+        for type in ['function', 'class']:
+            fh.replace_in_file('@' + type + 'tablehead', "", destination)
+            fh.replace_in_file('@' + type + 'tablebody', "", destination)
+            fh.replace_in_file('@' + type + 'details', "", destination)
+        return
 
     ###################################################################################################################
     #                                     Generating general information                                              #
@@ -239,24 +279,8 @@ def generate_code_doc(base_node, destination):
     fh.replace_in_file('@general_info', doc.getvalue(), destination)
 
     ###################################################################################################################
-    #                                     Generating abstract syntax tree                                             #
+    #                                  Generating class and function tables                                           #
     ###################################################################################################################
-    doc, tag, text = Doc().tagtext()
-    with tag('pre', klass='oz-code'):
-        doc.asis(gen_html_ast(base_node, ROOT_CONTEXTS + settings.oz_block_keywords, ["\'", "\"", "`"]))
-    ast = doc.getvalue()
-    fh.replace_in_file('@abstract_syntax_tree', ast, destination)
-
-    ###################################################################################################################
-    #                                          Generating source code                                                 #
-    ###################################################################################################################
-    doc, tag, text = Doc().tagtext()
-    with tag('pre', klass='line-numbers'):
-        with tag('code', klass='language-oz'):
-            text(code)
-    source_code = doc.getvalue()
-    fh.replace_in_file('@source_code', source_code, destination)
-
     make_table_section('class', class_repo, meth_repo, code, destination, fun_repo, class_repo, meth_repo, comment_repo)
     make_table_section('function', fun_repo, None, code, destination, fun_repo, class_repo, meth_repo, comment_repo)
 
